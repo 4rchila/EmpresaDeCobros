@@ -1,0 +1,37 @@
+1.github/              — CI/CD y templates de GitHub
+  2. backend/              — API REST (Django)
+     2.1  config/          — Configuración central de Django
+     2.2  apps/            — Los 11 módulos del sistema
+  3. frontend/             — SPA (React + TypeScript)
+     3.1  src/             — Código fuente React
+     3.2  htmlExamples     — Diseños de interfaz
+
+
+📄 docker-compose.dev.yml
+   → Orquesta todos los servicios en modo DESARROLLO:
+     - db         → PostgreSQL 15 (base de datos)
+     - redis      → Redis 7 (broker de Celery)
+     - backend    → Django corriendo con runserver (hot reload)
+     - celery     → Worker que ejecuta tareas asíncronas
+     - celery-beat→ Scheduler de tareas programadas (recordatorios diarios)
+     - frontend   → Vite dev server (hot reload)
+     - pgadmin    → Interfaz visual para explorar la base de datos
+   ℹ Permite que cualquier integrante levante el 100% del entorno con un solo
+     comando sin instalar nada localmente más allá de Docker.
+
+📄 docker-compose.yml
+   → Orquesta todos los servicios en modo PRODUCCIÓN:
+     - Usa Gunicorn en lugar de runserver (más robusto y eficiente)
+     - Agrega Nginx como proxy inverso y servidor de archivos estáticos
+     - No expone puertos de BD ni Redis al exterior
+     - No incluye pgAdmin (no se necesita en producción)
+   ℹ Se usa cuando el sistema se despliegue en el servidor real de la empresa.
+
+
+Ramas
+
+main - rama principal 
+develop - Rama de integracion, pull request ya con revision
+feature/German - gui
+feature/Marlon - backend
+feature/Daniel - database
