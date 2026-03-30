@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+.right-panel {
+  background: radial-gradient(circle at 30% 30%, #2c4b75, #0f1c2e);
+  position: relative;
+  overflow: hidden;
+}
+
+.right-panel::before {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: #cca641;
+  filter: blur(150px);
+  opacity: 0.25;
+  top: -100px;
+  right: -100px;
+}
+
+.logo-img {
+  height: 280px;
+  padding: 8px;
+  margin-top: -60px;
+  margin-bottom: -50px;
+}
+
+.finance-img{
+    width: 320px; 
+    height: 260px;
+    border-radius: 24px 24px 0 0;
+    background: linear-gradient(135deg, #1a2f4a, #0d1f35);
+}
+.login-card {
+  position: relative;
+  z-index: 1;
+
+  padding: 30px;
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(25px);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.4),
+    inset 0 0 1px rgba(255,255,255,0.3);
+
+  overflow: hidden;
+
+  animation: fadeUp 0.8s ease;
+}
+
+.login-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0.25),
+    rgba(255,255,255,0.05) 40%,
+    transparent 60%
+  );
+
+  pointer-events: none;
+}
+
+.input-custom {
+  display: flex;
+  align-items: center;
+
+  background: rgba(255,255,255,0.15);
+  border-radius: 50px;
+  padding: 6px 16px;
+
+  backdrop-filter: blur(10px);
+
+  transition: all 0.3s ease;
+}
+
+.input-custom input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+  font-size: 14px;
+}
+
+.input-custom input::placeholder {
+  color: rgba(255,255,255,0.7);
+}
+
+.input-custom:focus-within {
+  transform: scale(1.02);
+  background: rgba(255,255,255,0.25);
+  box-shadow: 0 0 15px rgba(255,255,255,0.2);
+}
+
+.btn-dora-login {
+  padding: 14px;
+  border: none;
+  border-radius: 50px;
+
+  background: linear-gradient(135deg, #cca641, #f6e073);
+
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #1a2332;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* efecto brillo en hover */
+.btn-dora-login::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: white;
+  top: 0;
+  left: -100%;
+  opacity: 0.2;
+  transition: 0.4s;
+}
+
+.btn-dora-login:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(204, 166, 65, 0.5);
+}
+
+.btn-dora-login:hover::after {
+  left: 100%;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
