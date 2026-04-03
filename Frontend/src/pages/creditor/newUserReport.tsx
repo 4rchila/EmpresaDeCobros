@@ -1,14 +1,13 @@
 import React from 'react';
-import '../dashboard/dashboard.css'; 
-import './userReport.css'; 
+import '../dashboard/dashboard.css'; // Mantiene el fondo principal y variables
+import './userReport.css'; // Estilos específicos del formulario
 
 function newUserReport() {
   return (
     <div className="w-100 h-100 d-flex flex-column">
       
-      {/* ================= TABS SUPERIORES ================= */}
+      {/* ================= TABS SUPERIORES (Estilo Neumórfico) ================= */}
       <div className="mb-4">
-        {/* Cambié el contenedor para que los botones tengan su propio espacio */}
         <div className="d-flex gap-3 tabs-container">
           <button className="tab-btn active">Nuevo Cliente</button>
           <button className="tab-btn">Buscar Cliente</button>
@@ -16,13 +15,13 @@ function newUserReport() {
         </div>
       </div>
 
-      {/* ================= CONTENEDOR DEL FORMULARIO ================= */}
-      <div className="glass-form-card p-4 p-lg-5 flex-fill overflow-auto custom-scrollbar">
+      {/* ================= CONTENEDOR DEL FORMULARIO (Extruded Card) ================= */}
+      <div className="extruded-form-card p-4 p-lg-5 flex-fill overflow-auto custom-scrollbar">
         
         {/* Cabecera del Formulario */}
-        <div className="d-flex align-items-center mb-5 pb-3 border-bottom border-secondary border-opacity-25">
+        <div className="d-flex align-items-center mb-5 pb-3 form-header-border">
            <div className="form-icon-box me-3">
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#cca641" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#cca641" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
                <circle cx="9" cy="7" r="4"></circle>
                <line x1="19" y1="8" x2="19" y2="14"></line>
@@ -43,27 +42,27 @@ function newUserReport() {
           <div className="row g-4 mb-5">
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Nombres *</label>
-              <div className="form-input-box"><input type="text" placeholder="Ej. Juan Carlos" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Ej. Juan Carlos" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Apellidos *</label>
-              <div className="form-input-box"><input type="text" placeholder="Ej. Pérez López" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Ej. Pérez López" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">DPI *</label>
-              <div className="form-input-box"><input type="text" placeholder="13 dígitos sin espacios" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="13 dígitos sin espacios" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">NIT *</label>
-              <div className="form-input-box"><input type="text" placeholder="Ej. 1234567-8" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Ej. 1234567-8" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Teléfono Principal *</label>
-              <div className="form-input-box"><input type="tel" placeholder="Ej. 5555-5555" required /></div>
+              <div className="inset-input-box"><input type="tel" placeholder="Ej. 5555-5555" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Teléfono Secundario</label>
-              <div className="form-input-box"><input type="tel" placeholder="Opcional" /></div>
+              <div className="inset-input-box"><input type="tel" placeholder="Opcional" /></div>
             </div>
           </div>
 
@@ -74,7 +73,7 @@ function newUserReport() {
           <div className="row g-4 mb-5">
             <div className="col-md-4">
               <label className="form-label text-white-50 small mb-2">Departamento *</label>
-              <div className="form-input-box pe-2">
+              <div className="inset-input-box pe-2">
                 <select className="w-100 bg-transparent border-0 outline-none select-custom" required>
                   <option value="">Seleccione...</option>
                   <option value="Totonicapan">Totonicapán</option>
@@ -85,7 +84,7 @@ function newUserReport() {
             </div>
             <div className="col-md-4">
               <label className="form-label text-white-50 small mb-2">Municipio *</label>
-              <div className="form-input-box pe-2">
+              <div className="inset-input-box pe-2">
                 <select className="w-100 bg-transparent border-0 outline-none select-custom" required>
                   <option value="">Seleccione...</option>
                   <option value="Totonicapan">Totonicapán (Cabecera)</option>
@@ -96,11 +95,11 @@ function newUserReport() {
             </div>
             <div className="col-md-4">
               <label className="form-label text-white-50 small mb-2">Distrito / Cantón *</label>
-              <div className="form-input-box"><input type="text" placeholder="Ej. Cantón Xesacmalja" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Ej. Cantón Xesacmalja" required /></div>
             </div>
             <div className="col-12">
               <label className="form-label text-white-50 small mb-2">Dirección Exacta *</label>
-              <div className="form-input-box"><input type="text" placeholder="Avenida, Calle, Lote, Referencias..." required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Avenida, Calle, Lote, Referencias..." required /></div>
             </div>
           </div>
 
@@ -111,26 +110,26 @@ function newUserReport() {
           <div className="row g-4 mb-5">
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">¿En qué trabaja? *</label>
-              <div className="form-input-box"><input type="text" placeholder="Profesión u Oficio" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Profesión u Oficio" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Número de Trabajo *</label>
-              <div className="form-input-box"><input type="tel" placeholder="Ej. 5555-5555" required /></div>
+              <div className="inset-input-box"><input type="tel" placeholder="Ej. 5555-5555" required /></div>
             </div>
             <div className="col-12">
               <label className="form-label text-white-50 small mb-2">Dirección del Lugar de Trabajo *</label>
-              <div className="form-input-box"><input type="text" placeholder="Dirección completa" required /></div>
+              <div className="inset-input-box"><input type="text" placeholder="Dirección completa" required /></div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Ingresos Mensuales *</label>
-              <div className="form-input-box d-flex align-items-center">
+              <div className="inset-input-box d-flex align-items-center">
                  <span className="text-gold me-2 fw-bold">Q</span>
                  <input type="number" className="flex-fill" placeholder="0.00" required />
               </div>
             </div>
             <div className="col-md-6">
               <label className="form-label text-white-50 small mb-2">Egresos Mensuales *</label>
-              <div className="form-input-box d-flex align-items-center">
+              <div className="inset-input-box d-flex align-items-center">
                  <span className="text-gold me-2 fw-bold">Q</span>
                  <input type="number" className="flex-fill" placeholder="0.00" required />
               </div>
@@ -143,18 +142,18 @@ function newUserReport() {
           </h6>
           <div className="row g-4 mb-5">
             <div className="col-md-6">
-              <div className="upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
+              <div className="inset-upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
                  <p className="text-white mb-3 small">Foto de la Vivienda *</p>
-                 <button type="button" className="btn-upload d-flex align-items-center gap-2">
+                 <button type="button" className="btn-modern-dark d-flex align-items-center gap-2">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Subir Imagen
                  </button>
               </div>
             </div>
             <div className="col-md-6">
-              <div className="upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
+              <div className="inset-upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
                  <p className="text-white mb-3 small">Foto Recibo de Luz *</p>
-                 <button type="button" className="btn-upload d-flex align-items-center gap-2">
+                 <button type="button" className="btn-modern-dark d-flex align-items-center gap-2">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     Subir Imagen
                  </button>
@@ -167,40 +166,53 @@ function newUserReport() {
              <span className="text-gold me-2">05.</span> Referencias Personales
           </h6>
           
-          {/* Referencia 1 */}
           <div className="reference-box p-4 mb-3">
-             <p className="text-gold fw-bold mb-3" style={{ fontSize: '13px' }}>Referencia 1 (Obligatoria)</p>
+             <p className="text-gold fw-bold mb-3" style={{ fontSize: '13px', color: '#cca641' }}>Referencia 1 (Obligatoria)</p>
              <div className="row g-3">
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="text" placeholder="Nombres" required /></div>
+                 <div className="inset-input-box"><input type="text" placeholder="Nombres" required /></div>
                </div>
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="text" placeholder="Apellidos" required /></div>
+                 <div className="inset-input-box"><input type="text" placeholder="Apellidos" required /></div>
                </div>
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="tel" placeholder="No. Teléfono" required /></div>
+                 <div className="inset-input-box"><input type="tel" placeholder="No. Teléfono" required /></div>
                </div>
              </div>
           </div>
 
-          {/* Referencia 2 */}
           <div className="reference-box p-4 mb-3">
              <p className="text-white-50 fw-bold mb-3" style={{ fontSize: '13px' }}>Referencia 2 (Opcional)</p>
              <div className="row g-3">
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="text" placeholder="Nombres" /></div>
+                 <div className="inset-input-box"><input type="text" placeholder="Nombres" /></div>
                </div>
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="text" placeholder="Apellidos" /></div>
+                 <div className="inset-input-box"><input type="text" placeholder="Apellidos" /></div>
                </div>
                <div className="col-md-4">
-                 <div className="form-input-box"><input type="tel" placeholder="No. Teléfono" /></div>
+                 <div className="inset-input-box"><input type="tel" placeholder="No. Teléfono" /></div>
+               </div>
+             </div>
+          </div>
+
+          <div className="reference-box p-4 mb-3">
+             <p className="text-white-50 fw-bold mb-3" style={{ fontSize: '13px' }}>Referencia 3 (Opcional)</p>
+             <div className="row g-3">
+               <div className="col-md-4">
+                 <div className="inset-input-box"><input type="text" placeholder="Nombres" /></div>
+               </div>
+               <div className="col-md-4">
+                 <div className="inset-input-box"><input type="text" placeholder="Apellidos" /></div>
+               </div>
+               <div className="col-md-4">
+                 <div className="inset-input-box"><input type="tel" placeholder="No. Teléfono" /></div>
                </div>
              </div>
           </div>
 
           {/* ---- BOTÓN GUARDAR ---- */}
-          <div className="d-flex justify-content-end mt-5 pt-4 border-top border-secondary border-opacity-25">
+          <div className="d-flex justify-content-end mt-5 pt-4 form-header-border">
              <button type="submit" className="btn-gold-action px-5 py-3 d-flex align-items-center gap-2" style={{ fontSize: '14px', borderRadius: '12px' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                 REGISTRAR ACREEDOR
