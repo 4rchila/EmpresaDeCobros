@@ -1,0 +1,154 @@
+/* ================= TABS SUPERIORES (Botones separados) ================= */
+.tabs-container {
+  background: transparent; 
+}
+
+.tab-btn {
+  background: rgba(26, 35, 50, 0.8); 
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px 28px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.15);
+}
+
+.tab-btn:hover {
+  background: rgba(44, 75, 117, 0.6);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #cca641, #f6e073);
+  color: #1a2332;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 15px rgba(204, 166, 65, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ================= CONTENEDOR PRINCIPAL DEL FORMULARIO ================= */
+.glass-form-card {
+  background: rgba(26, 35, 50, 0.6);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.form-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(204, 166, 65, 0.1);
+  border: 1px solid rgba(204, 166, 65, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ================= INPUTS DEL FORMULARIO ================= */
+.form-input-box {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.25); 
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 16px;
+  transition: all 0.3s ease;
+}
+
+.form-input-box:focus-within {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(204, 166, 65, 0.5);
+  box-shadow: 0 0 0 3px rgba(204, 166, 65, 0.1);
+}
+
+.form-input-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+  font-size: 13px;
+}
+
+.form-input-box input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.select-custom {
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.select-custom option {
+  background-color: #1a2332 !important;
+  color: #ffffff !important;
+  padding: 12px;
+}
+
+/* ================= CAJAS DE REFERENCIA Y UPLOAD ================= */
+.reference-box {
+  background: rgba(0, 0, 0, 0.15); 
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.upload-box {
+  background: rgba(0, 0, 0, 0.15);
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.upload-box:hover {
+  border-color: rgba(204, 166, 65, 0.5);
+  background: rgba(204, 166, 65, 0.05);
+}
+
+.btn-upload {
+  background: #1a2332;
+  color: #cca641;
+  border: 1px solid rgba(204, 166, 65, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-upload:hover {
+  background: #cca641;
+  color: #1a2332;
+}
+
+/* ================= SCROLLBAR CUSTOM ================= */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(204, 166, 65, 0.3);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(204, 166, 65, 0.6);
+}
