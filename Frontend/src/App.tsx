@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route} from 'react-router-dom'
 import LoginPage from './pages/auth/LoginPage'
 import DashboardPage from './pages/dashboard/DashboardPage'
-import NewUserReport from './pages/creditor/newUserReport'
+import CreditorPage from './pages/creditor/creditorsPage'
 
 function App() {
   return (
@@ -9,7 +9,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage/>}/>
         <Route path="/PrendaSol" element={<DashboardPage/>}/>
-        <Route path="/newUser" element={<NewUserReport/>}/>
+        <Route path="/CreditorPage" element={<CreditorPage/>}/>
       </Routes>
     </BrowserRouter>
   )

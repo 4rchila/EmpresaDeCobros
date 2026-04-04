@@ -32,6 +32,7 @@ function Dashboard() {
           <button className="nav-btn">ACREEDORES</button>
           <button className="nav-btn">PRÉSTAMOS</button>
           <button className="nav-btn">PAGOS</button>
+          <button className="nav-btn">CAJA FUERTE</button>
           <button className="nav-btn">REPORTES</button>
           <button className="nav-btn">BITÁCORA SISTEMA</button>
         </div>

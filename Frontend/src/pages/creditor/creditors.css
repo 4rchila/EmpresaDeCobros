@@ -1,12 +1,12 @@
 /* ================= TABS SUPERIORES (Estilo Neumórfico Dashboard) ================= */
 .tabs-container {
   background: transparent;
-  background-color: #1a2332;
+  background-color: #0b1f33;
 }
 
 .tab-btn {
-  background: rgba(26, 35, 50, 0.6);
-  background-color: #1a2332;
+  background: #071521;
+ /* background-color: #1a2332; */
   backdrop-filter: blur(12px);
   color: rgb(255, 251, 251);
   
@@ -42,7 +42,7 @@
 .extruded-form-card {
   position: relative;
   /* Fondo mimético con el ambiente (Azul oscuro profundo) */
-  background: rgb(26, 35, 50);
+  background: linear-gradient(135deg,#071521,#0b1f33,#06121c);
   backdrop-filter: blur(12px);
   border-radius: 16px;
   
