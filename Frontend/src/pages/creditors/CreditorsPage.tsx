@@ -1,0 +1,1539 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from 'react';
+import axios, { type AxiosError } from 'axios';
+import '../dashboard/dashboard.css';
+import './creditors.css';
+import {
+  API_BASE_URL,
+  authHeaders,
+  hasPermission,
+  type SessionUser,
+} from '../../lib';
+
+type CreditorsTabKey = 'nuevo' | 'buscar' | 'lista_negra';
+
+type CreditorsPageProps = {
+  user: SessionUser | null;
+};
+
+type TabConfig = {
+  key: CreditorsTabKey;
+  label: string;
+  visible: boolean;
+};
+
+type SearchResult = {
+  id: number;
+  nombre_completo: string;
+  nombres: string;
+  apellidos: string;
+  dpi: string | null;
+  nit: string | null;
+  direccion: string | null;
+  municipio: string | null;
+  distrito: string | null;
+  departamento: string | null;
+  estado_cliente: string;
+  fecha_registro: string;
+  telefonos: Array<{
+    id: number;
+    numero: string;
+    orden: number;
+    tipo: string | null;
+  }>;
+  en_lista_negra: boolean;
+  asesor_nombre: string | null;
+};
+
+type BlacklistItem = {
+  id: number;
+  fecha_ingreso: string;
+  acreedor: SearchResult;
+};
+
+type ReferenceForm = {
+  nombres: string;
+  apellidos: string;
+  telefono: string;
+  parentesco: string;
+  direccion: string;
+};
+
+type FormState = {
+  nombres: string;
+  apellidos: string;
+  dpi: string;
+  nit: string;
+  fecha_nacimiento: string;
+
+  telefono_principal: string;
+  telefono_secundario: string;
+  telefono_trabajo: string;
+
+  direccion: string;
+  departamento: string;
+  municipio: string;
+  distrito: string;
+
+  lugar_trabajo: string;
+  direccion_trabajo: string;
+  puesto: string;
+  tiempo_laborando: string;
+  ingresos_mensuales: string;
+  egreso_aproximado_mensual: string;
+  otras_fuentes_ingreso: string;
+
+  foto_vivienda: string;
+  foto_recibo_luz: string;
+
+  observaciones: string;
+};
+
+type ErrorResponseData = {
+  detail?: string;
+  dpi?: string[];
+  referencias?: string[];
+};
+
+const INITIAL_FORM: FormState = {
+  nombres: '',
+  apellidos: '',
+  dpi: '',
+  nit: '',
+  fecha_nacimiento: '',
+
+  telefono_principal: '',
+  telefono_secundario: '',
+  telefono_trabajo: '',
+
+  direccion: '',
+  departamento: '',
+  municipio: '',
+  distrito: '',
+
+  lugar_trabajo: '',
+  direccion_trabajo: '',
+  puesto: '',
+  tiempo_laborando: '',
+  ingresos_mensuales: '',
+  egreso_aproximado_mensual: '',
+  otras_fuentes_ingreso: '',
+
+  foto_vivienda: '',
+  foto_recibo_luz: '',
+
+  observaciones: '',
+};
+
+const INITIAL_REFERENCES: ReferenceForm[] = [
+  { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
+  { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
+  { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
+];
+
+function getErrorDetail(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ErrorResponseData>;
+    const data = axiosError.response?.data;
+
+    if (typeof data?.detail === 'string' && data.detail.trim()) {
+      return data.detail;
+    }
+
+    if (Array.isArray(data?.dpi) && typeof data.dpi[0] === 'string') {
+      return data.dpi[0];
+    }
+
+    if (
+      Array.isArray(data?.referencias) &&
+      typeof data.referencias[0] === 'string'
+    ) {
+      return data.referencias[0];
+    }
+  }
+
+  return fallback;
+}
+
+function CreditorsPage({ user }: CreditorsPageProps) {
+  const [activeTab, setActiveTab] = useState<CreditorsTabKey>('nuevo');
+
+  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [references, setReferences] =
+    useState<ReferenceForm[]>(INITIAL_REFERENCES);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
+  const [blacklistError, setBlacklistError] = useState('');
+  const [blacklistItems, setBlacklistItems] = useState<BlacklistItem[]>([]);
+  const [blacklistQuery, setBlacklistQuery] = useState('');
+
+  const [blacklistCandidateQuery, setBlacklistCandidateQuery] = useState('');
+  const [blacklistCandidates, setBlacklistCandidates] = useState<SearchResult[]>(
+    [],
+  );
+  const [blacklistCandidateLoading, setBlacklistCandidateLoading] =
+    useState(false);
+  const [blacklistActionLoading, setBlacklistActionLoading] = useState<
+    number | null
+  >(null);
+  const [blacklistActionMessage, setBlacklistActionMessage] = useState('');
+
+  const canCreate = hasPermission(user, 'crear_acreedor');
+  const canSearch = hasPermission(user, [
+    'buscar_acreedor',
+    'crear_acreedor',
+    'ver_acreedores_globales',
+  ]);
+  const canValidateBlacklist = hasPermission(user, 'validar_lista_negra');
+  const canViewBlacklist = hasPermission(user, 'ver_lista_negra');
+  const canAssignBlacklist = hasPermission(user, [
+    'asignar_lista_negra',
+    'agregar_lista_negra',
+  ]);
+
+  const roleName = user?.role?.trim().toLowerCase() ?? '';
+  const hideBlacklistForRole =
+    roleName === 'asesor' || roleName === 'secretaria';
+
+  const tabs = useMemo<TabConfig[]>(
+    () => [
+      {
+        key: 'nuevo',
+        label: 'Nuevo Acreedor',
+        visible: canCreate,
+      },
+      {
+        key: 'buscar',
+        label: 'Buscar Acreedor',
+        visible: canSearch,
+      },
+      {
+        key: 'lista_negra',
+        label: canViewBlacklist ? 'Lista Negra' : 'Validar Lista Negra',
+        visible:
+          !hideBlacklistForRole && (canViewBlacklist || canValidateBlacklist),
+      },
+    ],
+    [
+      canCreate,
+      canSearch,
+      canValidateBlacklist,
+      canViewBlacklist,
+      hideBlacklistForRole,
+    ],
+  );
+
+  const visibleTabs = tabs.filter((tab) => tab.visible);
+
+  const safeActiveTab: CreditorsTabKey = visibleTabs.some(
+    (tab) => tab.key === activeTab,
+  )
+    ? activeTab
+    : visibleTabs[0]?.key ?? 'buscar';
+
+  const updateForm = (field: keyof FormState, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateReference = (
+    index: number,
+    field: keyof ReferenceForm,
+    value: string,
+  ) => {
+    setReferences((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+    );
+  };
+
+  const handlePhotoSelection = (
+    field: 'foto_vivienda' | 'foto_recibo_luz',
+    file: File | null,
+  ) => {
+    if (!file) return;
+    updateForm(field, file.name);
+  };
+
+  const resetCreateForm = () => {
+    setForm(INITIAL_FORM);
+    setReferences(INITIAL_REFERENCES);
+  };
+
+  const buildCreatePayload = () => {
+    const cleanedReferences = references
+      .map((ref) => ({
+        nombres: ref.nombres.trim(),
+        apellidos: ref.apellidos.trim(),
+        telefono: ref.telefono.trim(),
+        parentesco: ref.parentesco.trim(),
+        direccion: ref.direccion.trim(),
+      }))
+      .filter(
+        (ref, index) =>
+          index === 0 || ref.nombres || ref.apellidos || ref.telefono,
+      );
+
+    return {
+      nombres: form.nombres.trim(),
+      apellidos: form.apellidos.trim(),
+      dpi: form.dpi.trim(),
+      nit: form.nit.trim(),
+      fecha_nacimiento: form.fecha_nacimiento || null,
+
+      telefono_principal: form.telefono_principal.trim(),
+      telefono_secundario: form.telefono_secundario.trim(),
+      telefono_trabajo: form.telefono_trabajo.trim(),
+
+      direccion: form.direccion.trim(),
+      departamento: form.departamento.trim(),
+      municipio: form.municipio.trim(),
+      distrito: form.distrito.trim(),
+
+      lugar_trabajo: form.lugar_trabajo.trim(),
+      direccion_trabajo: form.direccion_trabajo.trim(),
+      puesto: form.puesto.trim(),
+      tiempo_laborando: form.tiempo_laborando.trim(),
+      ingresos_mensuales: form.ingresos_mensuales || '0',
+      egreso_aproximado_mensual: form.egreso_aproximado_mensual || '0',
+      otras_fuentes_ingreso: form.otras_fuentes_ingreso.trim(),
+
+      foto_vivienda: form.foto_vivienda.trim(),
+      foto_recibo_luz: form.foto_recibo_luz.trim(),
+
+      observaciones: form.observaciones.trim(),
+      referencias: cleanedReferences,
+    };
+  };
+
+  const handleCreateSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    setSaveError('');
+    setSaveMessage('');
+
+    if (!references[0].nombres.trim()) {
+      setSaveError('La referencia 1 es obligatoria.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const payload = buildCreatePayload();
+
+      await axios.post(`${API_BASE_URL}/creditors/`, payload, {
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setSaveMessage('Acreedor registrado correctamente.');
+      resetCreateForm();
+    } catch (error: unknown) {
+      setSaveError(getErrorDetail(error, 'No se pudo registrar el acreedor.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSearch = async (): Promise<void> => {
+    setSearchError('');
+    setSearching(true);
+
+    try {
+      const { data } = await axios.get<SearchResult[]>(
+        `${API_BASE_URL}/creditors/search/`,
+        {
+          params: { q: searchQuery.trim() },
+          headers: authHeaders(),
+        },
+      );
+
+      setSearchResults(data);
+    } catch (error: unknown) {
+      setSearchError(
+        getErrorDetail(error, 'No se pudo realizar la búsqueda.'),
+      );
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const loadBlacklist = useCallback(
+    async (query: string = blacklistQuery.trim()): Promise<void> => {
+      setBlacklistError('');
+      setBlacklistLoading(true);
+
+      try {
+        const { data } = await axios.get<BlacklistItem[]>(
+          `${API_BASE_URL}/creditors/blacklist/`,
+          {
+            params: query ? { q: query } : {},
+            headers: authHeaders(),
+          },
+        );
+
+        setBlacklistItems(data);
+      } catch (error: unknown) {
+        setBlacklistError(
+          getErrorDetail(error, 'No se pudo cargar la lista negra.'),
+        );
+        setBlacklistItems([]);
+      } finally {
+        setBlacklistLoading(false);
+      }
+    },
+    [blacklistQuery],
+  );
+
+  const handleBlacklistCandidateSearch = async (): Promise<void> => {
+    setBlacklistActionMessage('');
+    setBlacklistCandidateLoading(true);
+
+    try {
+      const { data } = await axios.get<SearchResult[]>(
+        `${API_BASE_URL}/creditors/search/`,
+        {
+          params: { q: blacklistCandidateQuery.trim() },
+          headers: authHeaders(),
+        },
+      );
+
+      setBlacklistCandidates(data);
+    } catch {
+      setBlacklistCandidates([]);
+    } finally {
+      setBlacklistCandidateLoading(false);
+    }
+  };
+
+  const handleAddToBlacklist = async (acreedorId: number): Promise<void> => {
+    setBlacklistActionMessage('');
+    setBlacklistActionLoading(acreedorId);
+
+    try {
+      await axios.post(
+        `${API_BASE_URL}/creditors/blacklist/`,
+        { acreedor_id: acreedorId },
+        {
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      setBlacklistActionMessage('Acreedor agregado a lista negra.');
+      await loadBlacklist();
+      await handleBlacklistCandidateSearch();
+    } catch (error: unknown) {
+      setBlacklistActionMessage(
+        getErrorDetail(error, 'No se pudo agregar a lista negra.'),
+      );
+    } finally {
+      setBlacklistActionLoading(null);
+    }
+  };
+
+  useEffect(() => {
+    if (safeActiveTab === 'lista_negra' && !hideBlacklistForRole && canViewBlacklist) {
+      void loadBlacklist();
+    }
+  }, [safeActiveTab, hideBlacklistForRole, canViewBlacklist, loadBlacklist]);
+
+  const renderView = () => {
+    switch (safeActiveTab) {
+      case 'nuevo':
+        return canCreate ? (
+          <VistaNuevoAcreedor
+            form={form}
+            references={references}
+            saving={saving}
+            saveMessage={saveMessage}
+            saveError={saveError}
+            onChange={updateForm}
+            onReferenceChange={updateReference}
+            onPhotoSelection={handlePhotoSelection}
+            onSubmit={handleCreateSubmit}
+          />
+        ) : (
+          <VistaSinPermiso mensaje="No tienes permiso para registrar acreedores." />
+        );
+
+      case 'buscar':
+        return canSearch ? (
+          <VistaBuscarAcreedor
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            onSearch={handleSearch}
+            searching={searching}
+            error={searchError}
+            results={searchResults}
+          />
+        ) : (
+          <VistaSinPermiso mensaje="No tienes permiso para consultar acreedores." />
+        );
+
+      case 'lista_negra':
+        return !hideBlacklistForRole &&
+          (canViewBlacklist || canValidateBlacklist) ? (
+          <VistaListaNegra
+            canViewFullList={canViewBlacklist}
+            canValidateOnly={canValidateBlacklist && !canViewBlacklist}
+            canAssign={canAssignBlacklist}
+            blacklistQuery={blacklistQuery}
+            setBlacklistQuery={setBlacklistQuery}
+            onLoadBlacklist={() => {
+              void loadBlacklist();
+            }}
+            blacklistLoading={blacklistLoading}
+            blacklistError={blacklistError}
+            blacklistItems={blacklistItems}
+            candidateQuery={blacklistCandidateQuery}
+            setCandidateQuery={setBlacklistCandidateQuery}
+            onSearchCandidates={() => {
+              void handleBlacklistCandidateSearch();
+            }}
+            candidateLoading={blacklistCandidateLoading}
+            candidates={blacklistCandidates}
+            onAddToBlacklist={(id) => {
+              void handleAddToBlacklist(id);
+            }}
+            actionLoading={blacklistActionLoading}
+            actionMessage={blacklistActionMessage}
+          />
+        ) : (
+          <VistaSinPermiso mensaje="No tienes permiso para consultar la lista negra." />
+        );
+
+      default:
+        return (
+          <VistaBuscarAcreedor
+            query=""
+            onQueryChange={() => {}}
+            onSearch={() => {}}
+            searching={false}
+            error=""
+            results={[]}
+          />
+        );
+    }
+  };
+
+  if (visibleTabs.length === 0) {
+    return (
+      <VistaSinPermiso mensaje="Tu rol no tiene acceso al módulo de acreedores." />
+    );
+  }
+
+  return (
+    <div className="w-100 d-flex flex-column">
+      <div className="mb-4">
+        <div className="d-flex gap-3 tabs-container flex-wrap">
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`tab-btn ${safeActiveTab === tab.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="extruded-form-card p-4 p-lg-5 flex-fill overflow-auto overflow-x-hidden custom-scrollbar">
+        {renderView()}
+      </div>
+    </div>
+  );
+}
+
+function VistaSinPermiso({ mensaje }: { mensaje: string }) {
+  return (
+    <div
+      className="w-100 d-flex flex-column align-items-center justify-content-center text-center"
+      style={{ minHeight: '280px' }}
+    >
+      <div className="form-icon-box mb-3">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#cca641"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 8v4"></path>
+          <path d="M12 16h.01"></path>
+        </svg>
+      </div>
+      <h4 className="text-white fw-bold mb-2">Acceso restringido</h4>
+      <p className="text-white-50 mb-0">{mensaje}</p>
+    </div>
+  );
+}
+
+function VistaNuevoAcreedor({
+  form,
+  references,
+  saving,
+  saveMessage,
+  saveError,
+  onChange,
+  onReferenceChange,
+  onPhotoSelection,
+  onSubmit,
+}: {
+  form: FormState;
+  references: ReferenceForm[];
+  saving: boolean;
+  saveMessage: string;
+  saveError: string;
+  onChange: (field: keyof FormState, value: string) => void;
+  onReferenceChange: (
+    index: number,
+    field: keyof ReferenceForm,
+    value: string,
+  ) => void;
+  onPhotoSelection: (
+    field: 'foto_vivienda' | 'foto_recibo_luz',
+    file: File | null,
+  ) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <div className="w-100 d-flex flex-column">
+      <div className="d-flex align-items-center mb-5 pb-3 form-header-border">
+        <div className="form-icon-box me-3">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#cca641"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+        </div>
+        <div>
+          <h4
+            className="text-white fw-bold mb-1"
+            style={{ letterSpacing: '0.5px' }}
+          >
+            Registro de Nuevo Acreedor
+          </h4>
+          <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
+            Los campos marcados con (*) son obligatorios.
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit}>
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">01.</span> Información Personal
+        </h6>
+
+        <div className="row g-4 mb-5">
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Nombres *
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.nombres}
+                onChange={(e) => onChange('nombres', e.target.value)}
+                placeholder="Ej. Juan Carlos"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Apellidos *
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.apellidos}
+                onChange={(e) => onChange('apellidos', e.target.value)}
+                placeholder="Ej. Pérez López"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">DPI *</label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.dpi}
+                onChange={(e) => onChange('dpi', e.target.value)}
+                placeholder="13 dígitos sin espacios"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">NIT</label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.nit}
+                onChange={(e) => onChange('nit', e.target.value)}
+                placeholder="Ej. 1234567-8"
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Fecha de Nacimiento
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="date"
+                value={form.fecha_nacimiento}
+                onChange={(e) => onChange('fecha_nacimiento', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Teléfono Principal *
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="tel"
+                value={form.telefono_principal}
+                onChange={(e) => onChange('telefono_principal', e.target.value)}
+                placeholder="Ej. 5555-5555"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Teléfono Secundario
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="tel"
+                value={form.telefono_secundario}
+                onChange={(e) => onChange('telefono_secundario', e.target.value)}
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Teléfono Trabajo
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="tel"
+                value={form.telefono_trabajo}
+                onChange={(e) => onChange('telefono_trabajo', e.target.value)}
+                placeholder="Ej. 5555-5555"
+              />
+            </div>
+          </div>
+        </div>
+
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">02.</span> Ubicación Domiciliar
+        </h6>
+
+        <div className="row g-4 mb-5">
+          <div className="col-md-4">
+            <label className="form-label text-white-50 small mb-2">
+              Departamento *
+            </label>
+            <div className="inset-input-box pe-2">
+              <select
+                className="w-100 bg-transparent border-0 outline-none select-custom"
+                value={form.departamento}
+                onChange={(e) => onChange('departamento', e.target.value)}
+                required
+              >
+                <option value="">Seleccione...</option>
+                <option value="Totonicapan">Totonicapán</option>
+                <option value="Quetzaltenango">Quetzaltenango</option>
+                <option value="Guatemala">Guatemala</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="col-md-4">
+            <label className="form-label text-white-50 small mb-2">
+              Municipio *
+            </label>
+            <div className="inset-input-box pe-2">
+              <select
+                className="w-100 bg-transparent border-0 outline-none select-custom"
+                value={form.municipio}
+                onChange={(e) => onChange('municipio', e.target.value)}
+                required
+              >
+                <option value="">Seleccione...</option>
+                <option value="Totonicapan">Totonicapán (Cabecera)</option>
+                <option value="San Cristobal">San Cristóbal Totonicapán</option>
+                <option value="San Francisco">San Francisco El Alto</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="col-md-4">
+            <label className="form-label text-white-50 small mb-2">
+              Distrito / Cantón *
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.distrito}
+                onChange={(e) => onChange('distrito', e.target.value)}
+                placeholder="Ej. Cantón Xesacmalja"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label text-white-50 small mb-2">
+              Dirección Exacta *
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.direccion}
+                onChange={(e) => onChange('direccion', e.target.value)}
+                placeholder="Avenida, Calle, Lote, Referencias..."
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">03.</span> Laboral y Financiera
+        </h6>
+
+        <div className="row g-4 mb-5">
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              ¿En qué trabaja?
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.lugar_trabajo}
+                onChange={(e) => onChange('lugar_trabajo', e.target.value)}
+                placeholder="Profesión u Oficio"
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Puesto
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.puesto}
+                onChange={(e) => onChange('puesto', e.target.value)}
+                placeholder="Puesto o función"
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Tiempo Laborando
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.tiempo_laborando}
+                onChange={(e) => onChange('tiempo_laborando', e.target.value)}
+                placeholder="Ej. 2 años"
+              />
+            </div>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label text-white-50 small mb-2">
+              Dirección del Lugar de Trabajo
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.direccion_trabajo}
+                onChange={(e) => onChange('direccion_trabajo', e.target.value)}
+                placeholder="Dirección completa"
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Ingresos Mensuales *
+            </label>
+            <div className="inset-input-box d-flex align-items-center">
+              <span className="text-gold me-2 fw-bold">Q</span>
+              <input
+                type="number"
+                step="0.01"
+                className="flex-fill"
+                value={form.ingresos_mensuales}
+                onChange={(e) => onChange('ingresos_mensuales', e.target.value)}
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Egresos Mensuales *
+            </label>
+            <div className="inset-input-box d-flex align-items-center">
+              <span className="text-gold me-2 fw-bold">Q</span>
+              <input
+                type="number"
+                step="0.01"
+                className="flex-fill"
+                value={form.egreso_aproximado_mensual}
+                onChange={(e) =>
+                  onChange('egreso_aproximado_mensual', e.target.value)
+                }
+                placeholder="0.00"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label text-white-50 small mb-2">
+              Otras Fuentes de Ingreso
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="text"
+                value={form.otras_fuentes_ingreso}
+                onChange={(e) =>
+                  onChange('otras_fuentes_ingreso', e.target.value)
+                }
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+        </div>
+
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">04.</span> Respaldo Documental
+        </h6>
+
+        <div className="row g-4 mb-5">
+          <div className="col-md-6">
+            <div className="inset-upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
+              <p className="text-white mb-3 small">Foto de la Vivienda</p>
+              <input
+                id="foto_vivienda"
+                type="file"
+                className="d-none"
+                onChange={(e) =>
+                  onPhotoSelection(
+                    'foto_vivienda',
+                    e.target.files?.[0] ?? null,
+                  )
+                }
+              />
+              <label
+                htmlFor="foto_vivienda"
+                className="btn-modern-dark d-flex align-items-center gap-2"
+                style={{ cursor: 'pointer' }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Seleccionar Imagen
+              </label>
+              {form.foto_vivienda ? (
+                <small className="text-white-50 mt-3">{form.foto_vivienda}</small>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="col-md-6">
+            <div className="inset-upload-box p-4 d-flex flex-column align-items-center justify-content-center text-center">
+              <p className="text-white mb-3 small">Foto Recibo de Luz</p>
+              <input
+                id="foto_recibo_luz"
+                type="file"
+                className="d-none"
+                onChange={(e) =>
+                  onPhotoSelection(
+                    'foto_recibo_luz',
+                    e.target.files?.[0] ?? null,
+                  )
+                }
+              />
+              <label
+                htmlFor="foto_recibo_luz"
+                className="btn-modern-dark d-flex align-items-center gap-2"
+                style={{ cursor: 'pointer' }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Seleccionar Imagen
+              </label>
+              {form.foto_recibo_luz ? (
+                <small className="text-white-50 mt-3">
+                  {form.foto_recibo_luz}
+                </small>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">05.</span> Referencias Personales
+        </h6>
+
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="reference-box p-4 mb-3">
+            <p
+              className={`${index === 0 ? 'text-gold' : 'text-white-50'} fw-bold mb-3`}
+              style={{
+                fontSize: '13px',
+                color: index === 0 ? '#cca641' : undefined,
+              }}
+            >
+              Referencia {index + 1} {index === 0 ? '(Obligatoria)' : '(Opcional)'}
+            </p>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="inset-input-box">
+                  <input
+                    type="text"
+                    placeholder="Nombres"
+                    value={references[index].nombres}
+                    onChange={(e) =>
+                      onReferenceChange(index, 'nombres', e.target.value)
+                    }
+                    required={index === 0}
+                  />
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="inset-input-box">
+                  <input
+                    type="text"
+                    placeholder="Apellidos"
+                    value={references[index].apellidos}
+                    onChange={(e) =>
+                      onReferenceChange(index, 'apellidos', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="inset-input-box">
+                  <input
+                    type="tel"
+                    placeholder="No. Teléfono"
+                    value={references[index].telefono}
+                    onChange={(e) =>
+                      onReferenceChange(index, 'telefono', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="inset-input-box">
+                  <input
+                    type="text"
+                    placeholder="Parentesco"
+                    value={references[index].parentesco}
+                    onChange={(e) =>
+                      onReferenceChange(index, 'parentesco', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="col-md-6">
+                <div className="inset-input-box">
+                  <input
+                    type="text"
+                    placeholder="Dirección"
+                    value={references[index].direccion}
+                    onChange={(e) =>
+                      onReferenceChange(index, 'direccion', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <h6 className="form-section-title mb-4">
+          <span className="text-gold me-2">06.</span> Observaciones
+        </h6>
+
+        <div className="row g-4 mb-4">
+          <div className="col-12">
+            <div className="inset-input-box">
+              <input
+                type="text"
+                placeholder="Observaciones adicionales"
+                value={form.observaciones}
+                onChange={(e) => onChange('observaciones', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {(saveMessage || saveError) && (
+          <div className="mb-4">
+            {saveMessage ? <div className="text-success small">{saveMessage}</div> : null}
+            {saveError ? <div className="text-warning small">{saveError}</div> : null}
+          </div>
+        )}
+
+        <div className="d-flex justify-content-end mt-5 pt-4 form-header-border">
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn-gold-action px-5 py-3 d-flex align-items-center justify-content-center gap-2"
+            style={{ fontSize: '14px', borderRadius: '12px' }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            {saving ? 'GUARDANDO...' : 'REGISTRAR ACREEDOR'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function VistaBuscarAcreedor({
+  query,
+  onQueryChange,
+  onSearch,
+  searching,
+  error,
+  results,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSearch: () => void;
+  searching: boolean;
+  error: string;
+  results: SearchResult[];
+}) {
+  return (
+    <>
+      <div className="d-flex align-items-center mb-5 pb-3 form-header-border">
+        <div className="form-icon-box me-3">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#cca641"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <div>
+          <h4
+            className="text-white fw-bold mb-1"
+            style={{ letterSpacing: '0.5px' }}
+          >
+            Búsqueda de Acreedores
+          </h4>
+          <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
+            Busca por DPI, Nombre, Apellido, NIT o Número de Teléfono.
+          </span>
+        </div>
+      </div>
+
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="inset-input-box">
+            <input
+              type="text"
+              placeholder="Ingrese el dato a buscar..."
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+            />
+            <button
+              type="button"
+              className="btn-gold-action ms-2 px-4 py-2"
+              style={{ borderRadius: '8px' }}
+              onClick={onSearch}
+              disabled={searching}
+            >
+              {searching ? 'Buscando...' : 'Buscar'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {error ? <p className="text-warning">{error}</p> : null}
+
+      <div className="d-flex flex-column gap-3">
+        {results.length === 0 ? (
+          <p className="text-white-50 mb-0">No hay resultados para mostrar.</p>
+        ) : (
+          results.map((item) => (
+            <div key={item.id} className="inner-dark-box p-4">
+              <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                  <h5 className="text-white mb-1">{item.nombre_completo}</h5>
+                  <p className="text-white-50 mb-1">
+                    DPI: {item.dpi || '—'} | NIT: {item.nit || '—'}
+                  </p>
+                  <p className="text-white-50 mb-1">
+                    {item.departamento || '—'}, {item.municipio || '—'},{' '}
+                    {item.distrito || '—'}
+                  </p>
+                  <p className="text-white-50 mb-1">
+                    Dirección: {item.direccion || '—'}
+                  </p>
+                  <p className="text-white-50 mb-1">
+                    Teléfonos:{' '}
+                    {item.telefonos.length > 0
+                      ? item.telefonos.map((t) => t.numero).join(', ')
+                      : '—'}
+                  </p>
+                  <p className="text-white-50 mb-0">
+                    Estado: {item.estado_cliente}{' '}
+                    {item.en_lista_negra ? '• EN LISTA NEGRA' : ''}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function VistaListaNegra({
+  canViewFullList,
+  canValidateOnly,
+  canAssign,
+  blacklistQuery,
+  setBlacklistQuery,
+  onLoadBlacklist,
+  blacklistLoading,
+  blacklistError,
+  blacklistItems,
+  candidateQuery,
+  setCandidateQuery,
+  onSearchCandidates,
+  candidateLoading,
+  candidates,
+  onAddToBlacklist,
+  actionLoading,
+  actionMessage,
+}: {
+  canViewFullList: boolean;
+  canValidateOnly: boolean;
+  canAssign: boolean;
+  blacklistQuery: string;
+  setBlacklistQuery: (value: string) => void;
+  onLoadBlacklist: () => void;
+  blacklistLoading: boolean;
+  blacklistError: string;
+  blacklistItems: BlacklistItem[];
+  candidateQuery: string;
+  setCandidateQuery: (value: string) => void;
+  onSearchCandidates: () => void;
+  candidateLoading: boolean;
+  candidates: SearchResult[];
+  onAddToBlacklist: (acreedorId: number) => void;
+  actionLoading: number | null;
+  actionMessage: string;
+}) {
+  return (
+    <>
+      <div className="d-flex align-items-center mb-5 pb-3 form-header-border">
+        <div
+          className="form-icon-box me-3"
+          style={{
+            borderColor: '#ff4747',
+            background: 'rgba(255, 71, 71, 0.1)',
+          }}
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#ff4747"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <div>
+          <h4
+            className="text-white fw-bold mb-1"
+            style={{ letterSpacing: '0.5px' }}
+          >
+            Lista Negra
+          </h4>
+          <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
+            {canViewFullList
+              ? 'Acreedores restringidos por incumplimiento o fraude.'
+              : 'Solo puedes validar si una persona aparece restringida, sin consultar el listado completo.'}
+          </span>
+        </div>
+      </div>
+
+      {blacklistError ? <p className="text-warning">{blacklistError}</p> : null}
+      {actionMessage ? (
+        <p className="text-warning">{actionMessage}</p>
+      ) : null}
+
+      {canViewFullList && (
+        <>
+          <div className="inner-dark-box p-4 mb-4">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+              <h5 className="text-white mb-0">Registros restringidos</h5>
+            </div>
+
+            <div className="inset-input-box mb-3">
+              <input
+                type="text"
+                placeholder="Buscar en lista negra por DPI o nombre..."
+                value={blacklistQuery}
+                onChange={(e) => setBlacklistQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onLoadBlacklist()}
+              />
+              <button
+                type="button"
+                className="btn-gold-action ms-2 px-4 py-2"
+                style={{ borderRadius: '8px' }}
+                onClick={onLoadBlacklist}
+                disabled={blacklistLoading}
+              >
+                {blacklistLoading ? 'Cargando...' : 'Buscar'}
+              </button>
+            </div>
+
+            <div className="d-flex flex-column gap-3">
+              {blacklistItems.length === 0 ? (
+                <p className="text-white-50 mb-0">
+                  No hay registros en lista negra.
+                </p>
+              ) : (
+                blacklistItems.map((item) => (
+                  <div key={item.id} className="border border-secondary rounded p-3">
+                    <h6 className="text-white mb-1">
+                      {item.acreedor.nombre_completo}
+                    </h6>
+                    <p className="text-white-50 mb-1">
+                      DPI: {item.acreedor.dpi || '—'}
+                    </p>
+                    <p className="text-white-50 mb-0">
+                      Fecha ingreso:{' '}
+                      {new Date(item.fecha_ingreso).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {canAssign && (
+            <div className="inner-dark-box p-4">
+              <h5 className="text-white mb-3">
+                Agregar acreedor a lista negra
+              </h5>
+
+              <div className="inset-input-box mb-3">
+                <input
+                  type="text"
+                  placeholder="Buscar acreedor por DPI o nombre..."
+                  value={candidateQuery}
+                  onChange={(e) => setCandidateQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && onSearchCandidates()}
+                />
+                <button
+                  type="button"
+                  className="btn-gold-action ms-2 px-4 py-2"
+                  style={{ borderRadius: '8px' }}
+                  onClick={onSearchCandidates}
+                  disabled={candidateLoading}
+                >
+                  {candidateLoading ? 'Buscando...' : 'Buscar'}
+                </button>
+              </div>
+
+              <div className="d-flex flex-column gap-3">
+                {candidates.length === 0 ? (
+                  <p className="text-white-50 mb-0">
+                    No hay acreedores para mostrar.
+                  </p>
+                ) : (
+                  candidates.map((item) => (
+                    <div
+                      key={item.id}
+                      className="border border-secondary rounded p-3 d-flex justify-content-between align-items-center gap-3 flex-wrap"
+                    >
+                      <div>
+                        <h6 className="text-white mb-1">
+                          {item.nombre_completo}
+                        </h6>
+                        <p className="text-white-50 mb-0">
+                          DPI: {item.dpi || '—'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn-gold-action px-4 py-2"
+                        style={{ borderRadius: '8px' }}
+                        onClick={() => onAddToBlacklist(item.id)}
+                        disabled={
+                          actionLoading === item.id || item.en_lista_negra
+                        }
+                      >
+                        {item.en_lista_negra
+                          ? 'Ya en lista negra'
+                          : actionLoading === item.id
+                            ? 'Agregando...'
+                            : 'Agregar'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {canValidateOnly && (
+        <div className="inner-dark-box p-4">
+          <h5 className="text-white mb-3">Validación puntual</h5>
+          <div className="inset-input-box mb-3">
+            <input
+              type="text"
+              placeholder="Buscar por DPI o nombre del acreedor..."
+              value={blacklistQuery}
+              onChange={(e) => setBlacklistQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onLoadBlacklist()}
+            />
+            <button
+              type="button"
+              className="btn-gold-action ms-2 px-4 py-2"
+              style={{ borderRadius: '8px' }}
+              onClick={onLoadBlacklist}
+              disabled={blacklistLoading}
+            >
+              {blacklistLoading ? 'Validando...' : 'Validar'}
+            </button>
+          </div>
+
+          <div className="d-flex flex-column gap-3">
+            {blacklistItems.length === 0 ? (
+              <p className="text-white-50 mb-0">
+                Esta vista no expone el catálogo completo; solo confirma si el
+                acreedor está restringido.
+              </p>
+            ) : (
+              blacklistItems.map((item) => (
+                <div key={item.id} className="border border-secondary rounded p-3">
+                  <h6 className="text-white mb-1">
+                    {item.acreedor.nombre_completo}
+                  </h6>
+                  <p className="text-white-50 mb-0">Resultado: restringido</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default CreditorsPage;

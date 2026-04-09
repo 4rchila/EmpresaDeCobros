@@ -1,0 +1,10 @@
+Django==5.0.*
+djangorestframework
+psycopg2-binary
+django-environ
+djangorestframework-simplejwt
+django-cors-headers
+celery
+redis
+drf-spectacular
+python-dotenv
