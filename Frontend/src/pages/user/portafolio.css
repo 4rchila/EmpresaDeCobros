@@ -1,0 +1,764 @@
+/* ================= PÁGINA PRINCIPAL ================= */
+.portafolio-page {
+    padding: 30px;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #06121c, #0b1f33, #071521);
+    color: #fff;
+    overflow-y: auto;
+}
+
+/* ================= HEADER ================= */
+.portafolio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portafolio-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.portafolio-subtitle {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.portafolio-btn-crear {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(204, 166, 65, 0.25);
+}
+
+.portafolio-btn-crear:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(204, 166, 65, 0.4);
+}
+
+/* ================= SECCIONES ================= */
+.portafolio-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.portafolio-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 20px;
+}
+
+.portafolio-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.portafolio-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0;
+}
+
+/* ================= GRID DE CARTERAS ================= */
+.portafolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+/* ================= CARTERA CARD (TABLOIDE) ================= */
+.cartera-card {
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.cartera-card:hover {
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), 0 0 15px rgba(204, 166, 65, 0.08), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+/* Header de cartera */
+.cartera-header {
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.cartera-header-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.cartera-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cartera-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.cartera-edit-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    padding: 4px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    line-height: 0;
+}
+
+.cartera-name-row:hover .cartera-edit-btn {
+    opacity: 1;
+}
+
+.cartera-edit-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.cartera-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cartera-edit-input {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: #1a2332;
+    outline: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.cartera-edit-action {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    padding: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    line-height: 0;
+}
+
+.cartera-edit-action:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.cartera-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+}
+
+/* Body de cartera */
+.cartera-body {
+    flex: 1;
+    padding: 12px;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.cartera-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 13px;
+    padding: 20px 0;
+}
+
+/* Footer de cartera */
+.cartera-footer {
+    padding: 8px 18px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.35);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    letter-spacing: 0.5px;
+}
+
+/* ================= TARJETA DE CLIENTE ================= */
+.cliente-card {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    border-left: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.cliente-card:hover {
+    background: rgba(204, 166, 65, 0.08);
+    border-color: rgba(204, 166, 65, 0.2);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.2), 0 0 10px rgba(204, 166, 65, 0.08);
+}
+
+.cliente-card:active {
+    cursor: grabbing;
+}
+
+.cliente-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 6px 0;
+}
+
+.cliente-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cliente-info-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ================= MODAL ================= */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #071521, #0b1f33);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+    animation: modalSlideIn 0.25s ease;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 0;
+}
+
+.modal-close:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.modal-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 14px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-data-group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.modal-data-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.modal-data-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.modal-data-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.modal-data-value-lg {
+    font-size: 18px;
+}
+
+.modal-ubicacion-box {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-status-tag {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+    width: fit-content;
+}
+
+/* ================= TABLA DE PRÉSTAMOS ================= */
+.modal-table-wrapper {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modal-table thead th {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.modal-table tbody td {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.modal-table tbody tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.td-monto {
+    font-weight: 700;
+    color: #fff !important;
+}
+
+/* Badges de estado de préstamo */
+.loan-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.status-ok {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-paid {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.status-late {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.modal-empty-loans {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 13px;
+
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Modal Footer */
+.modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modal-btn-close {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-btn-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* ================= BOTÓN ELIMINAR CARTERA ================= */
+.cartera-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cartera-delete-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    padding: 5px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    line-height: 0;
+}
+
+.cartera-card:hover .cartera-delete-btn {
+    opacity: 1;
+}
+
+.cartera-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+/* ================= TABLA CLICKEABLE ================= */
+.tr-clickable {
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.tr-clickable:hover td {
+    background: rgba(204, 166, 65, 0.06) !important;
+}
+
+.loan-view-link {
+    font-size: 11px;
+    color: #cca641;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ================= MODAL GRANDE ================= */
+.modal-content-lg {
+    max-width: 780px;
+}
+
+/* ================= DETALLE DEL PRÉSTAMO ================= */
+.loan-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.loan-detail-item {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Caja de Monto Total a Pagar */
+.loan-monto-total-box {
+    background: rgba(204, 166, 65, 0.08);
+    border: 1px solid rgba(204, 166, 65, 0.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.loan-monto-total-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.loan-monto-total-value {
+    color: #cca641;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* ================= SECCIÓN DE GARANTÍAS ================= */
+.loan-garantia-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.loan-garantia-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.loan-garantia-count {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+}
+
+.loan-garantia-btn {
+    background: rgba(204, 166, 65, 0.1);
+    border: 1px solid rgba(204, 166, 65, 0.3);
+    border-radius: 10px;
+    color: #cca641;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+}
+
+.loan-garantia-btn:hover {
+    background: rgba(204, 166, 65, 0.18);
+    border-color: rgba(204, 166, 65, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(204, 166, 65, 0.15);
+}
+
+.loan-garantia-empty {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 13px;
+    text-align: center;
+    padding: 12px;
+    margin: 0;
+}
+
+/* ================= TARJETA DE DETALLE DE GARANTÍA ================= */
+.garantia-detail-card {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 14px;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    border-left: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.garantia-detail-header {
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.garantia-detail-number {
+    font-size: 12px;
+    font-weight: 700;
+    color: #cca641;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ================= UTILIDAD ================= */
+.text-gold {
+    color: #cca641 !important;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+    .portafolio-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .portafolio-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .loan-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}

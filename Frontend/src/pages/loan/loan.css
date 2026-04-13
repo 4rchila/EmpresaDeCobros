@@ -1,0 +1,334 @@
+/* ================= TABS SUPERIORES (Estilo Neumórfico Dashboard) ================= */
+.tabs-container {
+    background: transparent;
+    background-color: #0b1f33;
+}
+
+.tab-btn {
+    background: #071521;
+    backdrop-filter: blur(12px);
+    color: rgb(255, 251, 251);
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+
+    border-radius: 12px;
+    padding: 12px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 4px 6px 15px rgba(0, 0, 0, 0.2), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn:hover {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    /* Botón activo brillante y dorado */
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    border: none;
+    box-shadow: 0 6px 20px rgba(204, 166, 65, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+/* ================= CONTENEDOR PRINCIPAL DEL FORMULARIO ================= */
+.extruded-form-card {
+    position: relative;
+    /* Fondo mimético con el ambiente (Azul oscuro profundo) */
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+
+    /* Efecto 3D Neumórfico */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+/* Icono de Cabecera */
+.form-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(204, 166, 65, 0.15), rgba(204, 166, 65, 0.05));
+    border: 1px solid rgba(204, 166, 65, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-header-border {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid transparent;
+    /* Para la sección final de guardar */
+}
+
+.mt-5.pt-4.form-header-border {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+}
+
+/* Títulos de sección */
+.form-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* ================= INPUTS DEL FORMULARIO (Estilo Hundido / Inset) ================= */
+.inset-input-box {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.25);
+    /* Fondo oscuro profundo */
+    border-radius: 10px;
+
+    /* Sombras y bordes invertidos para que parezca un hueco */
+    border-top: 1px solid rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.3);
+
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.inset-input-box:focus-within {
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid rgba(204, 166, 65, 0.5);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.4), 0 0 10px rgba(204, 166, 65, 0.15);
+}
+
+.inset-input-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    width: 100%;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.inset-input-box input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* ================= SELECT (DROPDOWN) ================= */
+.select-custom {
+    color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    appearance: none;
+}
+
+.select-custom option {
+    background-color: #1a2332 !important;
+    color: #ffffff !important;
+    padding: 12px;
+}
+
+/* ================= CAJAS DE REFERENCIA Y UPLOAD ================= */
+.reference-box {
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.inset-upload-box {
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.inset-upload-box:hover {
+    border-color: rgba(204, 166, 65, 0.4);
+    background: rgba(204, 166, 65, 0.05);
+}
+
+/* ================= BOTÓN MODERNO OSCURO (Para uploads) ================= */
+.btn-modern-dark {
+    background: rgba(255, 255, 255, 0.06);
+    color: #cca641;
+    border: 1px solid rgba(204, 166, 65, 0.3);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-modern-dark:hover {
+    background: rgba(204, 166, 65, 0.15);
+    border-color: rgba(204, 166, 65, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(204, 166, 65, 0.2);
+}
+
+/* ================= BOTÓN DORADO DE ACCIÓN ================= */
+.btn-gold-action {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    border: none;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-gold-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(204, 166, 65, 0.4);
+}
+
+/* ================= CHECKBOX PLAN PERSONALIZADO ================= */
+.plan-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #cca641;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.plan-checkbox:checked {
+    background-color: #cca641;
+    border-color: #cca641;
+}
+
+/* ================= CAJA DE MONTO RESULTADO ================= */
+.monto-resultado-box {
+    background: rgba(204, 166, 65, 0.08);
+    border: 1px solid rgba(204, 166, 65, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(204, 166, 65, 0.08);
+}
+
+/* ================= BOTÓN AGREGAR GARANTÍA ================= */
+.btn-add-garantia {
+    background: transparent;
+    border: 2px dashed rgba(204, 166, 65, 0.3);
+    border-radius: 12px;
+    color: #cca641;
+    padding: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-add-garantia:hover {
+    background: rgba(204, 166, 65, 0.08);
+    border-color: rgba(204, 166, 65, 0.6);
+    transform: translateY(-1px);
+}
+
+/* ================= BOTÓN ELIMINAR GARANTÍA ================= */
+.btn-remove-garantia {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-remove-garantia:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* ================= BOTÓN AGREGAR FOTO ================= */
+.btn-add-foto {
+    background: transparent;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 20px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 100px;
+}
+
+.btn-add-foto:hover {
+    background: rgba(204, 166, 65, 0.05);
+    border-color: rgba(204, 166, 65, 0.4);
+    color: #cca641;
+}
+
+/* ================= BOTÓN ELIMINAR FOTO ================= */
+.btn-remove-foto {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    color: #ef4444;
+    padding: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 1;
+    line-height: 0;
+}
+
+.btn-remove-foto:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* ================= SCROLLBAR CUSTOM ================= */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(204, 166, 65, 0.2);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(204, 166, 65, 0.5);
+}
