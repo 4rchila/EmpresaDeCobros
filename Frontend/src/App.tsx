@@ -6,6 +6,8 @@ import LoanPage from './pages/loan/loans'
 import NewAdvisor from './pages/advisor/advisorPage'
 import UserProfile from './pages/user/userProfile'
 import PortafolioPage from './pages/user/portafolioPage'
+import PaymentsPage from './pages/payment/payments'
+import VaultPage from './pages/vault/vault'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
         <Route path="/AdvisorPage" element={<NewAdvisor />} />
         <Route path="/UserProfile" element={<UserProfile />} />
         <Route path="/PortafolioPage" element={<PortafolioPage />} />
+        <Route path="/PaymentsPage" element={<PaymentsPage />} />
+        <Route path="/VaultPage" element={<VaultPage />} />
       </Routes>
     </BrowserRouter>
   )
