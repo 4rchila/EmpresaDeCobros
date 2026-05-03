@@ -562,6 +562,747 @@
     color: rgba(255, 255, 255, 0.3);
 }
 
+/* ================= HISTORY FOOTER BUTTON ================= */
+.vault-history-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-view-full-history {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(204, 166, 65, 0.08), rgba(204, 166, 65, 0.04));
+    border-top: 1px solid rgba(204, 166, 65, 0.15);
+    border-left: 1px solid rgba(204, 166, 65, 0.1);
+    border-right: 1px solid rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #cca641;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-family: 'Poppins', sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-view-full-history::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(204, 166, 65, 0.08), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-view-full-history:hover {
+    background: linear-gradient(135deg, rgba(204, 166, 65, 0.12), rgba(204, 166, 65, 0.06));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.btn-view-full-history:hover::before { left: 100%; }
+
+.btn-view-full-history:active {
+    transform: scale(0.98);
+}
+
+.vault-history-footer-count {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(204, 166, 65, 0.15);
+    border: 1px solid rgba(204, 166, 65, 0.25);
+    padding: 2px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+/* ================= DESEMBOLSOS PENDIENTES ================= */
+.vault-disb-card {
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    border-radius: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+}
+
+.vault-disb-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vault-disb-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.vault-disb-badge-dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f59e0b;
+    border: 2px solid #0b1f33;
+    animation: securePulse 2s ease-in-out infinite;
+}
+
+.vault-disb-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+}
+
+.vault-disb-subtitle {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+    margin: 2px 0 0;
+}
+
+.vault-disb-pending-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.vault-disb-list {
+    /* container for disb rows */
+}
+
+.vault-disb-row {
+    display: flex;
+    align-items: center;
+    padding: 0 24px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: all 0.2s ease;
+    gap: 0;
+}
+
+.vault-disb-row:last-child {
+    border-bottom: none;
+}
+
+.vault-disb-row-clickable {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 16px 16px 24px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    min-width: 0;
+}
+
+.vault-disb-row-clickable:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.vault-disb-row.disb-approved {
+    opacity: 0.6;
+}
+
+.vault-disb-status-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.vault-disb-status-icon.status-pending {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.vault-disb-status-icon.status-approved {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.vault-disb-row-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.vault-disb-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 8px;
+}
+
+.vault-disb-status-badge.badge-pending {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.vault-disb-status-badge.badge-approved {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.vault-disb-client-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 4px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.vault-disb-detail-hint {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.2);
+    margin: 3px 0 0;
+    font-weight: 600;
+}
+
+.vault-disb-amount {
+    font-size: 16px;
+    font-weight: 800;
+    color: #f59e0b;
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 120px;
+}
+
+.btn-approve-disb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.btn-approve-disb:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.12));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.btn-approve-disb:active {
+    transform: scale(0.97);
+}
+
+/* Disbursement detail panel */
+.vault-disb-detail-panel {
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    background: linear-gradient(135deg, #0a1828, #0e2236, #081620);
+    border-radius: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6), inset 1px 1px 3px rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: panelSlideIn 0.35s ease;
+}
+
+.vault-disb-detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.vault-disb-detail-amount-card {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 14px;
+    padding: 20px 24px;
+    text-align: center;
+    border-top: 1px solid rgba(245, 158, 11, 0.1);
+    border-left: 1px solid rgba(245, 158, 11, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.vault-disb-detail-amount-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-bottom: 8px;
+}
+
+.vault-disb-detail-amount-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #f59e0b;
+    letter-spacing: 0.5px;
+}
+
+.vault-disb-detail-section {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 18px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.vault-disb-detail-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.vault-disb-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.vault-disb-detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.vault-disb-detail-field-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.vault-disb-detail-field-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+.vault-disb-detail-notes {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.btn-approve-disb-large {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #10b981;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    margin-top: 4px;
+}
+
+.btn-approve-disb-large:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.12));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.2);
+}
+
+.btn-approve-disb-large:active {
+    transform: scale(0.98);
+}
+
+/* ================= FULL HISTORY OVERLAY ================= */
+.vault-fullhistory-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: overlayFadeIn 0.3s ease;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.vault-fullhistory-panel {
+    width: 92%;
+    max-width: 1100px;
+    height: 90vh;
+    background: linear-gradient(135deg, #0a1828, #0e2236, #081620);
+    border-radius: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6), inset 1px 1px 3px rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: panelSlideIn 0.35s ease;
+}
+
+@keyframes panelSlideIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vault-fullhistory-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.vault-fullhistory-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.vault-fullhistory-subtitle {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+    margin: 2px 0 0;
+}
+
+.vault-fullhistory-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vault-fullhistory-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+
+.vault-fullhistory-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
+}
+
+.btn-toggle-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+}
+
+.btn-toggle-all:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vault-fullhistory-body {
+    flex: 1;
+    overflow-y: scroll;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vault-fullhistory-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.vault-fullhistory-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    margin: 8px 0;
+}
+
+.vault-fullhistory-body::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.25);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.2s ease;
+}
+
+.vault-fullhistory-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.45);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* ================= WEEK GROUP ================= */
+.vault-week-group {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.vault-week-group:hover {
+    border-top-color: rgba(204, 166, 65, 0.1);
+}
+
+.vault-week-group.week-expanded {
+    border-top-color: rgba(16, 185, 129, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.vault-week-chevron {
+    color: rgba(255, 255, 255, 0.3);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.vault-week-chevron.chevron-open {
+    transform: rotate(90deg);
+    color: #10b981;
+}
+
+.vault-week-tx-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+}
+
+.vault-week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(0, 0, 0, 0.1);
+    flex-wrap: wrap;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    user-select: none;
+}
+
+.vault-week-header:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.vault-week-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.vault-week-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(204, 166, 65, 0.08);
+    border: 1px solid rgba(204, 166, 65, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cca641;
+    flex-shrink: 0;
+}
+
+.vault-week-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 0 0 2px;
+}
+
+.vault-week-range {
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+.vault-week-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.vault-week-stat {
+    text-align: right;
+}
+
+.vault-week-stat-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 2px;
+}
+
+.vault-week-stat-value {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.vault-week-stat-value.stat-ingreso {
+    color: #10b981;
+}
+
+.vault-week-stat-value.stat-egreso {
+    color: #f87171;
+}
+
+.vault-week-stat-net {
+    padding-left: 16px;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.vault-week-transactions {
+    /* Transactions inside the week group */
+}
+
+.vault-week-transactions .vault-tx-row {
+    padding: 14px 24px;
+}
+
+.vault-tx-row-detailed .vault-tx-description {
+    -webkit-line-clamp: unset;
+}
+
+.vault-tx-day-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.25);
+    margin-top: 4px;
+}
+
+.vault-week-footer {
+    padding: 12px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.2);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.05);
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 992px) {
     .vault-grid {
@@ -570,6 +1311,19 @@
 
     .vault-form-card {
         position: static;
+    }
+
+    .vault-fullhistory-panel {
+        width: 96%;
+        height: 94vh;
+    }
+
+    .vault-fullhistory-header {
+        padding: 20px 20px;
+    }
+
+    .vault-fullhistory-body {
+        padding: 16px 16px;
     }
 }
 
@@ -596,5 +1350,61 @@
         text-align: right;
         min-width: auto;
         width: 100%;
+    }
+
+    .vault-fullhistory-panel {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .vault-week-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .vault-week-summary {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .vault-fullhistory-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .vault-disb-row {
+        flex-direction: column;
+        padding: 0;
+    }
+
+    .vault-disb-row-clickable {
+        flex-wrap: wrap;
+    }
+
+    .vault-disb-amount {
+        width: 100%;
+        text-align: left;
+        min-width: auto;
+    }
+
+    .btn-approve-disb {
+        width: 100%;
+        justify-content: center;
+        margin: 0 24px 16px;
+    }
+
+    .vault-disb-detail-panel {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .vault-disb-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vault-disb-detail-body {
+        padding: 16px 20px;
     }
 }

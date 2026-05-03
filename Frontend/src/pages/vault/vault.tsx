@@ -2,6 +2,26 @@ import "./vault.css";
 import '../dashboard/dashboard.css';
 import React, { useState, useMemo } from 'react';
 
+interface LoanInfo {
+    clientName: string;
+    clientDPI: string;
+    loanType: string;
+    requestedAmount: number;
+    interestRate: number;
+    term: string;
+    guarantee: string;
+    guaranteeValue: number;
+    advisor: string;
+}
+
+interface PendingDisbursement {
+    id: string;
+    loanInfo: LoanInfo;
+    requestDate: string;
+    status: 'pendiente' | 'aprobado';
+    notes: string;
+}
+
 interface Transaction {
     id: string;
     type: 'ingreso' | 'egreso';
@@ -22,6 +42,14 @@ const PlusCircleIcon = () => (<svg width="18" height="18" viewBox="0 0 24 24" fi
 const AlertCircleIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>);
 const TagIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>);
 const LockIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>);
+const CloseIcon = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>);
+const ChevronRightIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>);
+const ChevronDownIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>);
+const ClockIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>);
+const BellIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>);
+const UserIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>);
+const CheckCircleIcon = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>);
+const CreditCardIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>);
 
 const categories = [
     'Mantenimiento', 'Pago de Alquiler', 'Servicios Básicos',
@@ -29,10 +57,137 @@ const categories = [
 ];
 
 const initialTransactions: Transaction[] = [
-    { id: '1', type: 'ingreso', amount: 15000.00, date: '2026-04-25T10:30:00', description: 'Traslado inicial de fondos', category: 'Fondo Fijo' },
-    { id: '2', type: 'ingreso', amount: 3500.50, date: '2026-04-28T14:15:00', description: 'Recaudación de ventas semanales', category: 'Ventas' },
-    { id: '3', type: 'egreso', amount: 1200.00, date: '2026-04-29T09:00:00', description: 'Pago de mantenimiento preventivo de aires acondicionados', category: 'Mantenimiento' },
+    { id: '1', type: 'ingreso', amount: 15000.00, date: '2026-04-06T10:30:00', description: 'Traslado inicial de fondos de apertura', category: 'Fondo Fijo' },
+    { id: '2', type: 'egreso', amount: 800.00, date: '2026-04-07T11:00:00', description: 'Compra de papel bond y tinta para impresoras', category: 'Compra de Insumos' },
+    { id: '3', type: 'ingreso', amount: 2200.00, date: '2026-04-09T14:30:00', description: 'Recaudación cobros zona norte', category: 'Ventas' },
+    { id: '4', type: 'egreso', amount: 350.00, date: '2026-04-10T09:15:00', description: 'Pago de servicio de agua potable', category: 'Servicios Básicos' },
+    { id: '5', type: 'ingreso', amount: 3500.50, date: '2026-04-14T14:15:00', description: 'Recaudación de ventas semanales zona sur', category: 'Ventas' },
+    { id: '6', type: 'egreso', amount: 1200.00, date: '2026-04-15T09:00:00', description: 'Pago de mantenimiento preventivo de aires acondicionados', category: 'Mantenimiento' },
+    { id: '7', type: 'egreso', amount: 4500.00, date: '2026-04-16T16:00:00', description: 'Pago de alquiler del local comercial mes de abril', category: 'Pago de Alquiler' },
+    { id: '8', type: 'ingreso', amount: 1800.00, date: '2026-04-17T10:45:00', description: 'Recaudación cobros zona central', category: 'Ventas' },
+    { id: '9', type: 'egreso', amount: 650.00, date: '2026-04-18T08:30:00', description: 'Pago de servicio de energía eléctrica', category: 'Servicios Básicos' },
+    { id: '10', type: 'ingreso', amount: 5200.00, date: '2026-04-21T11:00:00', description: 'Depósito recaudación semanal consolidada', category: 'Ventas' },
+    { id: '11', type: 'egreso', amount: 2800.00, date: '2026-04-22T14:00:00', description: 'Anticipo de planilla quincenal empleados', category: 'Planilla / Salarios' },
+    { id: '12', type: 'egreso', amount: 180.00, date: '2026-04-23T09:30:00', description: 'Compra de artículos de limpieza y desinfectantes', category: 'Compra de Insumos' },
+    { id: '13', type: 'ingreso', amount: 3100.00, date: '2026-04-25T10:30:00', description: 'Recaudación cobros zona oriente', category: 'Ventas' },
+    { id: '14', type: 'egreso', amount: 420.00, date: '2026-04-28T15:20:00', description: 'Reparación de cerradura y sistema de seguridad', category: 'Mantenimiento' },
+    { id: '15', type: 'ingreso', amount: 2750.00, date: '2026-04-29T09:00:00', description: 'Recaudación cobros zona poniente', category: 'Ventas' },
+    { id: '16', type: 'egreso', amount: 550.00, date: '2026-04-30T11:30:00', description: 'Pago de servicio de internet y telefonía', category: 'Servicios Básicos' },
+    { id: '17', type: 'ingreso', amount: 4100.00, date: '2026-05-01T10:00:00', description: 'Depósito recaudación inicio de mes', category: 'Ventas' },
+    { id: '18', type: 'egreso', amount: 900.00, date: '2026-05-02T08:45:00', description: 'Compra de tóner y papelería general', category: 'Compra de Insumos' },
 ];
+
+const PREVIEW_COUNT = 6;
+
+const initialDisbursements: PendingDisbursement[] = [
+    {
+        id: 'disb-1',
+        loanInfo: {
+            clientName: 'María Elena Rodríguez',
+            clientDPI: '2456 78901 0101',
+            loanType: 'Préstamo Prendario',
+            requestedAmount: 5000.00,
+            interestRate: 5,
+            term: '6 meses',
+            guarantee: 'Cadena de oro 18k — 25g',
+            guaranteeValue: 8500.00,
+            advisor: 'Carlos Méndez'
+        },
+        requestDate: '2026-05-02T09:30:00',
+        status: 'pendiente',
+        notes: 'Cliente frecuente, tercer préstamo. Garantía verificada por joyero externo.'
+    },
+    {
+        id: 'disb-2',
+        loanInfo: {
+            clientName: 'Juan Pablo Torres',
+            clientDPI: '1987 65432 0501',
+            loanType: 'Préstamo Prendario',
+            requestedAmount: 3200.00,
+            interestRate: 5,
+            term: '4 meses',
+            guarantee: 'Anillo de diamante — 0.5 ct',
+            guaranteeValue: 6200.00,
+            advisor: 'Ana Lucía Pérez'
+        },
+        requestDate: '2026-05-02T11:15:00',
+        status: 'pendiente',
+        notes: 'Nuevo cliente. Documentación completa y verificada.'
+    },
+    {
+        id: 'disb-3',
+        loanInfo: {
+            clientName: 'Roberto Castillo Vega',
+            clientDPI: '3012 45678 0901',
+            loanType: 'Préstamo Prendario',
+            requestedAmount: 8500.00,
+            interestRate: 4.5,
+            term: '12 meses',
+            guarantee: 'Reloj Rolex Submariner',
+            guaranteeValue: 15000.00,
+            advisor: 'Carlos Méndez'
+        },
+        requestDate: '2026-05-01T16:45:00',
+        status: 'pendiente',
+        notes: 'Monto alto. Requiere autorización de gerencia. Reloj autenticado.'
+    },
+];
+
+/** Get Monday-based week start for a given date */
+function getWeekStart(dateStr: string): Date {
+    const d = new Date(dateStr);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+}
+
+function getWeekEnd(weekStart: Date): Date {
+    const end = new Date(weekStart);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return end;
+}
+
+function formatWeekRange(weekStart: Date): string {
+    const weekEnd = getWeekEnd(weekStart);
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+    const yearOpts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+    return `${weekStart.toLocaleDateString('es-ES', opts)} — ${weekEnd.toLocaleDateString('es-ES', yearOpts)}`;
+}
+
+interface WeekGroup {
+    weekKey: string;
+    weekStart: Date;
+    label: string;
+    transactions: Transaction[];
+    totalIngresos: number;
+    totalEgresos: number;
+    netAmount: number;
+}
+
+function groupByWeek(txs: Transaction[]): WeekGroup[] {
+    const sorted = [...txs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const groups = new Map<string, WeekGroup>();
+    for (const tx of sorted) {
+        const ws = getWeekStart(tx.date);
+        const key = ws.toISOString();
+        if (!groups.has(key)) {
+            groups.set(key, {
+                weekKey: key, weekStart: ws, label: formatWeekRange(ws),
+                transactions: [], totalIngresos: 0, totalEgresos: 0, netAmount: 0,
+            });
+        }
+        const g = groups.get(key)!;
+        g.transactions.push(tx);
+        if (tx.type === 'ingreso') g.totalIngresos += tx.amount;
+        else g.totalEgresos += tx.amount;
+        g.netAmount = g.totalIngresos - g.totalEgresos;
+    }
+    return Array.from(groups.values());
+}
 
 export default function VaultPage() {
     const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
@@ -41,6 +196,54 @@ export default function VaultPage() {
     const [expenseDescription, setExpenseDescription] = useState('');
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [showFullHistory, setShowFullHistory] = useState(false);
+    const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+    const [disbursements, setDisbursements] = useState<PendingDisbursement[]>(initialDisbursements);
+    const [selectedDisbursement, setSelectedDisbursement] = useState<PendingDisbursement | null>(null);
+
+    const pendingCount = useMemo(() => disbursements.filter(d => d.status === 'pendiente').length, [disbursements]);
+
+    const handleApproveDisbursement = (id: string) => {
+        const disb = disbursements.find(d => d.id === id);
+        if (!disb || disb.status === 'aprobado') return;
+
+        // Register as egreso in the transaction history
+        const newTx: Transaction = {
+            id: `disb-tx-${Date.now()}`,
+            type: 'egreso',
+            amount: disb.loanInfo.requestedAmount,
+            date: new Date().toISOString(),
+            description: `Desembolso de préstamo — ${disb.loanInfo.clientName} (${disb.loanInfo.guarantee})`,
+            category: 'Desembolso de Préstamo'
+        };
+        setTransactions(prev => [newTx, ...prev]);
+
+        // Update disbursement status
+        setDisbursements(prev => prev.map(d => d.id === id ? { ...d, status: 'aprobado' as const } : d));
+        if (selectedDisbursement?.id === id) {
+            setSelectedDisbursement(prev => prev ? { ...prev, status: 'aprobado' } : null);
+        }
+
+        setSuccessMsg(`Desembolso de ${formatMoney(disb.loanInfo.requestedAmount)} aprobado para ${disb.loanInfo.clientName}`);
+        setTimeout(() => setSuccessMsg(''), 3000);
+    };
+
+    const toggleWeek = (weekKey: string) => {
+        setExpandedWeeks(prev => {
+            const next = new Set(prev);
+            if (next.has(weekKey)) next.delete(weekKey);
+            else next.add(weekKey);
+            return next;
+        });
+    };
+
+    const expandAllWeeks = () => {
+        setExpandedWeeks(new Set(weekGroups.map(w => w.weekKey)));
+    };
+
+    const collapseAllWeeks = () => {
+        setExpandedWeeks(new Set());
+    };
 
     const currentBalance = useMemo(() => {
         return transactions.reduce((acc, curr) => {
@@ -49,6 +252,13 @@ export default function VaultPage() {
             return acc;
         }, 0);
     }, [transactions]);
+
+    const sortedTransactions = useMemo(() => {
+        return [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [transactions]);
+
+    const previewTransactions = useMemo(() => sortedTransactions.slice(0, PREVIEW_COUNT), [sortedTransactions]);
+    const weekGroups = useMemo(() => groupByWeek(transactions), [transactions]);
 
     const formatMoney = (amount: number) => new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(amount);
 
@@ -60,6 +270,11 @@ export default function VaultPage() {
             date: d.toLocaleDateString('es-ES', dateOpts),
             time: d.toLocaleTimeString('es-ES', timeOpts)
         };
+    };
+
+    const formatDayName = (dateString: string) => {
+        const d = new Date(dateString);
+        return d.toLocaleDateString('es-ES', { weekday: 'long' });
     };
 
     const handleAddExpense = (e: React.FormEvent) => {
@@ -80,6 +295,37 @@ export default function VaultPage() {
         setExpenseAmount(''); setExpenseCategory(''); setExpenseDescription('');
         setSuccessMsg('Egreso registrado exitosamente');
         setTimeout(() => setSuccessMsg(''), 2500);
+    };
+
+    const renderTxRow = (tx: Transaction, detailed?: boolean) => {
+        const { date, time } = formatDate(tx.date);
+        return (
+            <div key={tx.id} className={`vault-tx-row ${detailed ? 'vault-tx-row-detailed' : ''}`}>
+                <div className={`vault-tx-type-icon ${tx.type === 'ingreso' ? 'tx-ingreso' : 'tx-egreso'}`}>
+                    {tx.type === 'ingreso' ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                </div>
+                <div className="vault-tx-info">
+                    <span className={`vault-tx-type-badge ${tx.type === 'ingreso' ? 'badge-ingreso' : 'badge-egreso'}`}>
+                        {tx.type === 'ingreso' ? <><TrendingUpIcon /> Ingreso</> : <><TrendingDownIcon /> Egreso</>}
+                    </span>
+                    <span className="vault-tx-category-badge">{tx.category}</span>
+                    <p className="vault-tx-description">{tx.description}</p>
+                    {detailed && (
+                        <div className="vault-tx-day-label">
+                            <ClockIcon />
+                            <span style={{ textTransform: 'capitalize' }}>{formatDayName(tx.date)}</span>
+                        </div>
+                    )}
+                </div>
+                <div className="vault-tx-date">
+                    <div>{date}</div>
+                    <div className="vault-tx-date-sub">{time}</div>
+                </div>
+                <div className={`vault-tx-amount ${tx.type === 'ingreso' ? 'amount-ingreso' : 'amount-egreso'}`}>
+                    {tx.type === 'ingreso' ? '+' : '-'} {formatMoney(tx.amount)}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -111,6 +357,77 @@ export default function VaultPage() {
                         <span className="vault-balance-label">Efectivo Disponible en Bóveda</span>
                     </div>
                     <p className="vault-balance-amount">{formatMoney(currentBalance)}</p>
+                </div>
+            </div>
+
+            {/* ============ DESEMBOLSOS PENDIENTES ============ */}
+            <div className="vault-disbursements-section px-4 px-lg-5 mb-4">
+                <div className="vault-disb-card">
+                    <div className="vault-disb-header">
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="vault-disb-icon-box">
+                                <BellIcon />
+                                {pendingCount > 0 && <span className="vault-disb-badge-dot" />}
+                            </div>
+                            <div>
+                                <h3 className="vault-disb-title">Desembolsos Pendientes</h3>
+                                <p className="vault-disb-subtitle">Solicitudes de préstamos por aprobar</p>
+                            </div>
+                        </div>
+                        {pendingCount > 0 && (
+                            <span className="vault-disb-pending-badge">
+                                <span className="vault-secure-dot" style={{ background: '#f59e0b' }} />
+                                {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="vault-disb-list">
+                        {disbursements.length === 0 ? (
+                            <div className="vault-empty-state" style={{ padding: '30px 20px' }}>
+                                <CheckCircleIcon />
+                                <p style={{ fontSize: 13, marginTop: 8 }}>No hay desembolsos pendientes</p>
+                            </div>
+                        ) : (
+                            disbursements.map(disb => {
+                                const { date, time } = formatDate(disb.requestDate);
+                                const isApproved = disb.status === 'aprobado';
+                                return (
+                                    <div key={disb.id} className={`vault-disb-row ${isApproved ? 'disb-approved' : 'disb-pending'}`}>
+                                        <div className="vault-disb-row-clickable" onClick={() => setSelectedDisbursement(disb)}>
+                                            <div className={`vault-disb-status-icon ${isApproved ? 'status-approved' : 'status-pending'}`}>
+                                                {isApproved ? <CheckCircleIcon /> : <ClockIcon />}
+                                            </div>
+                                            <div className="vault-disb-row-info">
+                                                <div className="d-flex align-items-center gap-2 mb-1">
+                                                    <span className={`vault-disb-status-badge ${isApproved ? 'badge-approved' : 'badge-pending'}`}>
+                                                        {isApproved ? 'Aprobado' : 'Pendiente'}
+                                                    </span>
+                                                    <span className="vault-tx-category-badge">{disb.loanInfo.loanType}</span>
+                                                </div>
+                                                <p className="vault-disb-client-name">
+                                                    <UserIcon /> {disb.loanInfo.clientName}
+                                                </p>
+                                                <p className="vault-disb-detail-hint">Click para ver detalles del préstamo</p>
+                                            </div>
+                                            <div className="vault-tx-date">
+                                                <div>{date}</div>
+                                                <div className="vault-tx-date-sub">{time}</div>
+                                            </div>
+                                            <div className="vault-disb-amount">
+                                                {formatMoney(disb.loanInfo.requestedAmount)}
+                                            </div>
+                                        </div>
+                                        {!isApproved && (
+                                            <button className="btn-approve-disb" onClick={(e) => { e.stopPropagation(); handleApproveDisbursement(disb.id); }}>
+                                                <CheckCircleIcon /> Aprobar
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -179,7 +496,7 @@ export default function VaultPage() {
                     </div>
                 </div>
 
-                {/* HISTORIAL DE MOVIMIENTOS */}
+                {/* HISTORIAL DE MOVIMIENTOS - PREVIEW */}
                 <div>
                     <div className="vault-history-card">
                         <div className="vault-history-header">
@@ -191,31 +508,7 @@ export default function VaultPage() {
                         </div>
 
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {transactions.map(tx => {
-                                const { date, time } = formatDate(tx.date);
-                                return (
-                                    <div key={tx.id} className="vault-tx-row">
-                                        <div className={`vault-tx-type-icon ${tx.type === 'ingreso' ? 'tx-ingreso' : 'tx-egreso'}`}>
-                                            {tx.type === 'ingreso' ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                                        </div>
-                                        <div className="vault-tx-info">
-                                            <span className={`vault-tx-type-badge ${tx.type === 'ingreso' ? 'badge-ingreso' : 'badge-egreso'}`}>
-                                                {tx.type === 'ingreso' ? <><TrendingUpIcon /> Ingreso</> : <><TrendingDownIcon /> Egreso</>}
-                                            </span>
-                                            <span className="vault-tx-category-badge">{tx.category}</span>
-                                            <p className="vault-tx-description">{tx.description}</p>
-
-                                        </div>
-                                        <div className="vault-tx-date">
-                                            <div>{date}</div>
-                                            <div className="vault-tx-date-sub">{time}</div>
-                                        </div>
-                                        <div className={`vault-tx-amount ${tx.type === 'ingreso' ? 'amount-ingreso' : 'amount-egreso'}`}>
-                                            {tx.type === 'ingreso' ? '+' : '-'} {formatMoney(tx.amount)}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {previewTransactions.map(tx => renderTxRow(tx))}
                             {transactions.length === 0 && (
                                 <div className="vault-empty-state">
                                     <ShieldIcon />
@@ -224,9 +517,216 @@ export default function VaultPage() {
                                 </div>
                             )}
                         </div>
+
+                        {/* Botón Ver Historial Completo */}
+                        {transactions.length > PREVIEW_COUNT && (
+                            <div className="vault-history-footer">
+                                <button className="btn-view-full-history" onClick={() => setShowFullHistory(true)}>
+                                    <CalendarIcon />
+                                    <span>Ver Historial Completo</span>
+                                    <span className="vault-history-footer-count">{transactions.length - PREVIEW_COUNT} más</span>
+                                    <ChevronRightIcon />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* ============ OVERLAY HISTORIAL COMPLETO POR SEMANAS ============ */}
+            {showFullHistory && (
+                <div className="vault-fullhistory-overlay" onClick={() => setShowFullHistory(false)}>
+                    <div className="vault-fullhistory-panel" onClick={e => e.stopPropagation()}>
+
+                        {/* Panel Header */}
+                        <div className="vault-fullhistory-header">
+                            <div className="d-flex align-items-center gap-3">
+                                <div className="vault-history-icon"><CalendarIcon /></div>
+                                <div>
+                                    <h2 className="vault-fullhistory-title">Historial Completo</h2>
+                                    <p className="vault-fullhistory-subtitle">Movimientos agrupados por semana</p>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-3">
+                                <span className="vault-tx-count-badge">{transactions.length} transacciones</span>
+                                <button className="vault-fullhistory-close" onClick={() => setShowFullHistory(false)}>
+                                    <CloseIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Toggle all */}
+                        <div className="vault-fullhistory-actions">
+                            <button className="btn-toggle-all" onClick={expandAllWeeks}>
+                                <ChevronDownIcon /> Expandir Todo
+                            </button>
+                            <button className="btn-toggle-all" onClick={collapseAllWeeks}>
+                                <ChevronRightIcon /> Colapsar Todo
+                            </button>
+                        </div>
+
+                        {/* Weeks List */}
+                        <div className="vault-fullhistory-body custom-scrollbar">
+                            {weekGroups.map((week) => {
+                                const isExpanded = expandedWeeks.has(week.weekKey);
+                                return (
+                                    <div key={week.weekKey} className={`vault-week-group ${isExpanded ? 'week-expanded' : ''}`}>
+                                        {/* Week header - clickable */}
+                                        <div className="vault-week-header" onClick={() => toggleWeek(week.weekKey)}>
+                                            <div className="vault-week-header-left">
+                                                <div className={`vault-week-chevron ${isExpanded ? 'chevron-open' : ''}`}>
+                                                    <ChevronRightIcon />
+                                                </div>
+                                                <div className="vault-week-icon"><CalendarIcon /></div>
+                                                <div>
+                                                    <p className="vault-week-label">Semana</p>
+                                                    <p className="vault-week-range">{week.label}</p>
+                                                </div>
+                                            </div>
+                                            <div className="vault-week-summary">
+                                                <div className="vault-week-stat">
+                                                    <span className="vault-week-stat-label">Ingresos</span>
+                                                    <span className="vault-week-stat-value stat-ingreso">+{formatMoney(week.totalIngresos)}</span>
+                                                </div>
+                                                <div className="vault-week-stat">
+                                                    <span className="vault-week-stat-label">Egresos</span>
+                                                    <span className="vault-week-stat-value stat-egreso">-{formatMoney(week.totalEgresos)}</span>
+                                                </div>
+                                                <div className="vault-week-stat vault-week-stat-net">
+                                                    <span className="vault-week-stat-label">Neto</span>
+                                                    <span className={`vault-week-stat-value ${week.netAmount >= 0 ? 'stat-ingreso' : 'stat-egreso'}`}>
+                                                        {week.netAmount >= 0 ? '+' : ''}{formatMoney(week.netAmount)}
+                                                    </span>
+                                                </div>
+                                                <span className="vault-week-tx-count">{week.transactions.length}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Week transactions - collapsible */}
+                                        {isExpanded && (
+                                            <>
+                                                <div className="vault-week-transactions">
+                                                    {week.transactions.map(tx => renderTxRow(tx, true))}
+                                                </div>
+                                                <div className="vault-week-footer">
+                                                    <span>{week.transactions.length} movimiento{week.transactions.length !== 1 ? 's' : ''} esta semana</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============ OVERLAY DETALLE DE DESEMBOLSO ============ */}
+            {selectedDisbursement && (
+                <div className="vault-fullhistory-overlay" onClick={() => setSelectedDisbursement(null)}>
+                    <div className="vault-disb-detail-panel" onClick={e => e.stopPropagation()}>
+                        <div className="vault-fullhistory-header">
+                            <div className="d-flex align-items-center gap-3">
+                                <div className={`vault-disb-status-icon ${selectedDisbursement.status === 'aprobado' ? 'status-approved' : 'status-pending'}`} style={{ width: 44, height: 44 }}>
+                                    {selectedDisbursement.status === 'aprobado' ? <CheckCircleIcon /> : <CreditCardIcon />}
+                                </div>
+                                <div>
+                                    <h2 className="vault-fullhistory-title">Detalle del Desembolso</h2>
+                                    <p className="vault-fullhistory-subtitle">Información completa del préstamo</p>
+                                </div>
+                            </div>
+                            <div className="d-flex align-items-center gap-3">
+                                <span className={`vault-disb-status-badge ${selectedDisbursement.status === 'aprobado' ? 'badge-approved' : 'badge-pending'}`} style={{ padding: '6px 14px', fontSize: 12 }}>
+                                    {selectedDisbursement.status === 'aprobado' ? '✓ Aprobado' : '⏳ Pendiente'}
+                                </span>
+                                <button className="vault-fullhistory-close" onClick={() => setSelectedDisbursement(null)}>
+                                    <CloseIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="vault-disb-detail-body custom-scrollbar">
+                            {/* Monto principal */}
+                            <div className="vault-disb-detail-amount-card">
+                                <span className="vault-disb-detail-amount-label">Monto Solicitado</span>
+                                <span className="vault-disb-detail-amount-value">{formatMoney(selectedDisbursement.loanInfo.requestedAmount)}</span>
+                            </div>
+
+                            {/* Info del cliente */}
+                            <div className="vault-disb-detail-section">
+                                <h4 className="vault-disb-detail-section-title"><UserIcon /> Información del Cliente</h4>
+                                <div className="vault-disb-detail-grid">
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Nombre Completo</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.clientName}</span>
+                                    </div>
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">DPI</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.clientDPI}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Info del préstamo */}
+                            <div className="vault-disb-detail-section">
+                                <h4 className="vault-disb-detail-section-title"><CreditCardIcon /> Detalles del Préstamo</h4>
+                                <div className="vault-disb-detail-grid">
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Tipo de Préstamo</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.loanType}</span>
+                                    </div>
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Tasa de Interés</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.interestRate}% mensual</span>
+                                    </div>
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Plazo</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.term}</span>
+                                    </div>
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Asesor Asignado</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.advisor}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Garantía */}
+                            <div className="vault-disb-detail-section">
+                                <h4 className="vault-disb-detail-section-title"><ShieldIcon /> Garantía</h4>
+                                <div className="vault-disb-detail-grid">
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Descripción de la Prenda</span>
+                                        <span className="vault-disb-detail-field-value">{selectedDisbursement.loanInfo.guarantee}</span>
+                                    </div>
+                                    <div className="vault-disb-detail-field">
+                                        <span className="vault-disb-detail-field-label">Valor Estimado</span>
+                                        <span className="vault-disb-detail-field-value" style={{ color: '#10b981' }}>{formatMoney(selectedDisbursement.loanInfo.guaranteeValue)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Notas */}
+                            <div className="vault-disb-detail-section">
+                                <h4 className="vault-disb-detail-section-title"><FileTextIcon /> Observaciones</h4>
+                                <p className="vault-disb-detail-notes">{selectedDisbursement.notes}</p>
+                            </div>
+
+                            {/* Fecha de solicitud */}
+                            <div className="vault-disb-detail-section">
+                                <h4 className="vault-disb-detail-section-title"><CalendarIcon /> Fecha de Solicitud</h4>
+                                <p className="vault-disb-detail-field-value">{formatDate(selectedDisbursement.requestDate).date} — {formatDate(selectedDisbursement.requestDate).time}</p>
+                            </div>
+
+                            {/* Botón de aprobar */}
+                            {selectedDisbursement.status === 'pendiente' && (
+                                <button className="btn-approve-disb-large" onClick={() => handleApproveDisbursement(selectedDisbursement.id)}>
+                                    <CheckCircleIcon /> Aprobar Desembolso de {formatMoney(selectedDisbursement.loanInfo.requestedAmount)}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
