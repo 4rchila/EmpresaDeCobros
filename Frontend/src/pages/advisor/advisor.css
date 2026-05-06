@@ -1,0 +1,523 @@
+/* ================= TABS SUPERIORES (Estilo Neumórfico Dashboard) ================= */
+.tabs-container {
+    background: transparent;
+    background-color: #0b1f33;
+}
+
+.tab-btn {
+    background: #071521;
+    backdrop-filter: blur(12px);
+    color: rgb(255, 251, 251);
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+
+    border-radius: 12px;
+    padding: 12px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 4px 6px 15px rgba(0, 0, 0, 0.2), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn:hover {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    transform: translateY(-2px);
+}
+
+.tab-btn.active {
+    /* Botón activo brillante y dorado */
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    border: none;
+    box-shadow: 0 6px 20px rgba(204, 166, 65, 0.3), inset 2px 2px 5px rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+/* ================= CONTENEDOR PRINCIPAL DEL FORMULARIO ================= */
+.extruded-form-card {
+    position: relative;
+    /* Fondo mimético con el ambiente (Azul oscuro profundo) */
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+
+    /* Efecto 3D Neumórfico */
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+/* Icono de Cabecera */
+.form-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(204, 166, 65, 0.15), rgba(204, 166, 65, 0.05));
+    border: 1px solid rgba(204, 166, 65, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-header-border {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid transparent;
+    /* Para la sección final de guardar */
+}
+
+.mt-5.pt-4.form-header-border {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
+}
+
+/* Títulos de sección */
+.form-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* ================= INPUTS DEL FORMULARIO (Estilo Hundido / Inset) ================= */
+.inset-input-box {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.25);
+    /* Fondo oscuro profundo */
+    border-radius: 10px;
+
+    /* Sombras y bordes invertidos para que parezca un hueco */
+    border-top: 1px solid rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.3);
+
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.inset-input-box:focus-within {
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid rgba(204, 166, 65, 0.5);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.4), 0 0 10px rgba(204, 166, 65, 0.15);
+}
+
+.inset-input-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    width: 100%;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.inset-input-box input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* ================= SELECT (DROPDOWN) ================= */
+.select-custom {
+    color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+    appearance: none;
+}
+
+.select-custom option {
+    background-color: #1a2332 !important;
+    color: #ffffff !important;
+    padding: 12px;
+}
+
+/* ================= CAJAS DE REFERENCIA Y UPLOAD ================= */
+.reference-box {
+    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.inset-upload-box {
+    background: rgba(0, 0, 0, 0.15);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.inset-upload-box:hover {
+    border-color: rgba(204, 166, 65, 0.4);
+    background: rgba(204, 166, 65, 0.05);
+}
+
+/* ================= SCROLLBAR CUSTOM ================= */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(204, 166, 65, 0.2);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(204, 166, 65, 0.5);
+}
+
+/* ================= BOTÓN DORADO DE ACCIÓN ================= */
+.btn-gold-action {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    border: none;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-gold-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(204, 166, 65, 0.4);
+}
+
+/* ================= LISTA DE ASESORES ================= */
+.advisor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.advisor-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    border-left: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.advisor-card:hover {
+    background: rgba(204, 166, 65, 0.05);
+    border-color: rgba(204, 166, 65, 0.15);
+}
+
+/* Avatar con iniciales */
+.advisor-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(204, 166, 65, 0.2), rgba(204, 166, 65, 0.08));
+    border: 1px solid rgba(204, 166, 65, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.advisor-avatar span {
+    font-size: 14px;
+    font-weight: 700;
+    color: #cca641;
+    letter-spacing: 1px;
+}
+
+/* Info del asesor */
+.advisor-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.advisor-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+}
+
+.advisor-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.advisor-role {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Badge de estado */
+.advisor-estado-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.estado-activo {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.estado-inactivo {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Contacto */
+.advisor-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.advisor-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* ================= TRANSFERENCIA - CHECKBOXES Y LISTA ================= */
+.transfer-count-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #cca641;
+    background: rgba(204, 166, 65, 0.1);
+    border: 1px solid rgba(204, 166, 65, 0.25);
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-left: 12px;
+}
+
+.transfer-cartera-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.transfer-check-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(0, 0, 0, 0.12);
+
+    border-top: 1px solid rgba(0, 0, 0, 0.25);
+    border-left: 1px solid rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+    box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.transfer-check-item:hover {
+    background: rgba(204, 166, 65, 0.05);
+    border-color: rgba(204, 166, 65, 0.12);
+}
+
+.transfer-check-item.selected {
+    background: rgba(204, 166, 65, 0.08);
+    border-color: rgba(204, 166, 65, 0.2);
+}
+
+.transfer-check-all {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 8px 18px;
+    opacity: 0.7;
+}
+
+.transfer-check-all:hover {
+    opacity: 1;
+    background: transparent;
+}
+
+/* Checkbox custom */
+.transfer-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.transfer-checkbox.checked {
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    border-color: transparent;
+    color: #1a2332;
+    box-shadow: 0 2px 8px rgba(204, 166, 65, 0.3);
+}
+
+/* Info de la cartera en checkbox */
+.transfer-cartera-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.transfer-cartera-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.transfer-cartera-count {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* ================= SEPARACIÓN ACTIVOS / INACTIVOS ================= */
+.advisor-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.advisor-section-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.advisor-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0;
+}
+
+.advisor-section-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* ================= TARJETA INACTIVA ================= */
+.advisor-card-inactive {
+    opacity: 0.55;
+}
+
+.advisor-card-inactive:hover {
+    opacity: 0.8;
+}
+
+.advisor-avatar-inactive {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.advisor-avatar-inactive span {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ================= BOTÓN TOGGLE ESTADO ================= */
+.advisor-toggle-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    line-height: 0;
+}
+
+.toggle-to-inactive {
+    background: rgba(239, 68, 68, 0.08);
+    color: rgba(239, 68, 68, 0.5);
+    border-color: rgba(239, 68, 68, 0.15);
+}
+
+.toggle-to-inactive:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.toggle-to-active {
+    background: rgba(16, 185, 129, 0.08);
+    color: rgba(16, 185, 129, 0.5);
+    border-color: rgba(16, 185, 129, 0.15);
+}
+
+.toggle-to-active:hover {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+    .advisor-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .advisor-contact {
+        width: 100%;
+    }
+}

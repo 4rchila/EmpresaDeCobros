@@ -35,11 +35,7 @@ class CustomJWTAuthentication(authentication.BaseAuthentication):
         if not user_id:
             raise exceptions.AuthenticationFailed("Token sin identificador de usuario.")
 
-        user = (
-            Usuario.objects.select_related("empleado", "role")
-            .filter(pk=user_id)
-            .first()
-        )
+        user = Usuario.objects.select_related("role").filter(pk=user_id).first()
 
         if not user:
             raise exceptions.AuthenticationFailed("Usuario no encontrado.")

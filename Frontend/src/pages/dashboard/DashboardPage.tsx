@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react'
+import axios from 'axios'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './dashboard.css'
-import { hasPermission, storage, type SessionUser } from '../../lib'
+import { API_BASE_URL, authHeaders, hasPermission, storage, type SessionUser } from '../../lib'
+import UserProfile from '../user/userProfile'
 import CreditorsPage from '../creditors/CreditorsPage'
+import LoansPage from '../loans/LoansPage'
+import AdvisorPage from '../advisor/advisorPage'
+import PortafolioPage from '../portafolio/portafolioPage'
 
 type SectionKey =
   | 'inicio'
-  | 'acreedores'
+  | 'perfil'
+  | 'clientes'
   | 'prestamos'
+  | 'portafolio'
+  | 'asesores'
   | 'pagos'
   | 'caja'
   | 'reportes'
@@ -21,42 +29,121 @@ type SectionItem = {
 
 type CanAccess = (required: string | string[]) => boolean
 
+type NotificationItem = {
+  id: string
+  kind: 'precalificacion' | 'prestamo' | 'desembolso'
+  title: string
+  subtitle: string
+}
+
+type PendingPrequalificationItem = {
+  id: number
+  cliente_id: number
+  usuario_creador_id: number | null
+  fecha_generacion: string
+  observaciones: string | null
+  estado_revision: string
+  cliente_nombre: string | null
+  cliente_dpi: string | null
+  usuario_creador_nombre: string | null
+}
+
+type PendingLoanItem = {
+  id: number
+  cliente_nombre: string
+  cliente_dpi: string | null
+  monto_solicitado: string
+  fecha_solicitud: string
+}
+
+const DASHBOARD_SECTION_KEY = 'dashboard_active_section'
+const LOANS_TAB_KEY = 'dashboard_loans_tab'
+const LOANS_PENDING_SECTION_KEY = 'dashboard_loans_pending_section'
+
+function formatMoney(value: string | number | null | undefined) {
+  return Number(value ?? 0).toLocaleString('es-GT', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 function DashboardHome({
   displayName,
   displayRole,
   can,
+  pendingPrequalificationItems,
+  pendingApprovalItems,
+  pendingDisbursementItems,
+  onOpenPendingPrequalification,
+  onOpenPendingApproval,
+  onOpenPendingDisbursement,
 }: {
   displayName: string
   displayRole: string
   can: CanAccess
+  pendingPrequalificationItems: PendingPrequalificationItem[]
+  pendingApprovalItems: PendingLoanItem[]
+  pendingDisbursementItems: PendingLoanItem[]
+  onOpenPendingPrequalification: () => void
+  onOpenPendingApproval: () => void
+  onOpenPendingDisbursement: () => void
 }) {
   const canSeePayments = can([
     'registrar_pago_cartera_propia',
     'registrar_pago_cualquier_acreedor',
     'ver_cobros_dia_propio',
-  ])
-  const canSeeRoute = can('ruta_cobro_propia')
-  const canSeeCaja = can([
-    'ingresar_recaudo_caja',
-    'aprobar_recaudo_caja',
-    'registrar_egresos_caja_fuerte',
-    'ver_historial_caja_fuerte',
-  ])
-  const canSeeLoanWorkflow = can([
-    'aprobar_acreedor_precalificacion',
-    'aprobar_acreedor_final',
-    'autorizar_desembolso',
-    'ver_solicitudes_globales',
-    'crear_planes_cobro',
-  ])
-  const canSeeReports = can([
-    'reportes_cartera_global',
-    'reportes_rendimiento_todos_asesores',
-    'ver_cobros_globales',
+    'registrar_pago',
+    'ver_pago',
   ])
 
+  const canSeeRoute = can('ruta_cobro_propia')
+
+  const roleLower = displayRole.trim().toLowerCase()
+
+  const isAdminRole =
+    roleLower === 'administrador' ||
+    roleLower === 'admin' ||
+    roleLower === 'gerente'
+
+  const canSeeLoanWorkflow =
+    isAdminRole &&
+    can([
+      'aprobar_acreedor_precalificacion',
+      'aprobar_acreedor_final',
+      'ver_solicitudes_globales',
+      'aprobar_prestamo',
+    ])
+
+  const canSeeCaja =
+    isAdminRole &&
+    can([
+      'ingresar_recaudo_caja',
+      'aprobar_recaudo_caja',
+      'registrar_egresos_caja_fuerte',
+      'ver_historial_caja_fuerte',
+      'gestionar_caja',
+      'ver_caja',
+    ])
+
+  const canSeeReports =
+    isAdminRole &&
+    can([
+      'reportes_cartera_global',
+      'reportes_rendimiento_todos_asesores',
+      'ver_cobros_globales',
+      'ver_reportes',
+    ])
+
+  const canSeeDisbursementCard =
+    isAdminRole && can(['autorizar_desembolso', 'registrar_desembolso'])
+
   const hasWidgets =
-    canSeePayments || canSeeRoute || canSeeCaja || canSeeLoanWorkflow || canSeeReports
+    canSeePayments ||
+    canSeeRoute ||
+    canSeeCaja ||
+    canSeeLoanWorkflow ||
+    canSeeReports ||
+    canSeeDisbursementCard
 
   return (
     <>
@@ -69,7 +156,8 @@ function DashboardHome({
         <div className="extruded-card p-4 mb-4">
           <h3 className="text-white mb-2">Sin módulos asignados</h3>
           <p className="text-white-50 mb-0">
-            Tu usuario inició sesión correctamente, pero no tiene widgets visibles en el dashboard.
+            Tu usuario inició sesión correctamente, pero no tiene widgets visibles
+            en el dashboard.
           </p>
         </div>
       )}
@@ -84,12 +172,26 @@ function DashboardHome({
                 </button>
 
                 <div className="amount-display d-flex align-items-center justify-content-center gap-3">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cca641" strokeWidth="2">
+                  <svg
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#cca641"
+                    strokeWidth="2"
+                  >
                     <rect x="2" y="6" width="20" height="12" rx="2"></rect>
                     <circle cx="12" cy="12" r="2"></circle>
                     <path d="M16 6v12M8 6v12" strokeOpacity="0.3"></path>
                   </svg>
-                  <span className="fw-bold" style={{ fontSize: '2.2rem', color: '#fff', letterSpacing: '1px' }}>
+                  <span
+                    className="fw-bold"
+                    style={{
+                      fontSize: '2.2rem',
+                      color: '#fff',
+                      letterSpacing: '1px',
+                    }}
+                  >
                     Q 12,589.00
                   </span>
                 </div>
@@ -101,10 +203,16 @@ function DashboardHome({
             <div className={canSeePayments ? 'col-md-7' : 'col-12'}>
               <div className="extruded-card h-100 d-flex flex-column p-4">
                 <div className="w-100 d-flex justify-content-center position-relative mb-3">
-                  <div className="glass-badge mx-auto text-center">Ruta del Día</div>
+                  <div className="glass-badge mx-auto text-center">
+                    Ruta del Día
+                  </div>
                   <span
                     className="position-absolute end-0 top-50 translate-middle-y link-hover"
-                    style={{ fontSize: '0.85rem', color: '#cca641', cursor: 'pointer' }}
+                    style={{
+                      fontSize: '0.85rem',
+                      color: '#cca641',
+                      cursor: 'pointer',
+                    }}
                   >
                     Ver mapa completo
                   </span>
@@ -118,8 +226,13 @@ function DashboardHome({
 
       {canSeePayments && (
         <>
-          <div className="extruded-card p-4 mb-4 d-flex flex-column align-items-center" style={{ minHeight: '160px' }}>
-            <div className="glass-badge mb-3 text-center mx-auto">Clientes Atrasados</div>
+          <div
+            className="extruded-card p-4 mb-4 d-flex flex-column align-items-center"
+            style={{ minHeight: '160px' }}
+          >
+            <div className="glass-badge mb-3 text-center mx-auto">
+              Clientes Atrasados
+            </div>
             <div className="w-100 rounded flex-fill inner-dark-box"></div>
           </div>
 
@@ -140,7 +253,9 @@ function DashboardHome({
 
             <div className="col-md-4">
               <div className="extruded-card h-100 d-flex flex-column align-items-center justify-content-center p-4 text-center">
-                <h6 className="fw-bold mb-2 text-white-50">Ganancia Recaudada</h6>
+                <h6 className="fw-bold mb-2 text-white-50">
+                  Ganancia Recaudada
+                </h6>
                 <h4 className="fw-bold mb-0 text-white">Q 600.00</h4>
               </div>
             </div>
@@ -151,32 +266,118 @@ function DashboardHome({
       {canSeeLoanWorkflow && (
         <div className="extruded-card p-4 mb-4">
           <div className="row g-4 h-100">
-            {can('aprobar_acreedor_precalificacion') && (
-              <div className="col-md-4">
-                <div className="inner-dark-box h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center" style={{ minHeight: '200px' }}>
-                  <button className="btn-modern-dark mb-3 w-100" type="button">
-                    Pendiente Precalificación
-                  </button>
+            <div className="col-md-4">
+              <div
+                className="inner-dark-box h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center"
+                style={{ minHeight: '200px' }}
+              >
+                <button
+                  className="btn-modern-dark mb-3 w-100"
+                  type="button"
+                  onClick={onOpenPendingPrequalification}
+                >
+                  Pendiente Precalificación
+                </button>
+
+                <div className="d-flex flex-column gap-2 w-100">
+                  {pendingPrequalificationItems.length === 0 ? (
+                    <span className="text-white-50 small">0 pendiente(s)</span>
+                  ) : (
+                    pendingPrequalificationItems.slice(0, 3).map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="reference-box p-2 text-start w-100"
+                        style={{ border: 'none' }}
+                        onClick={onOpenPendingPrequalification}
+                      >
+                        <strong className="text-white d-block">
+                          {item.cliente_nombre || 'Sin nombre'}
+                        </strong>
+                        <small className="text-white-50">
+                          DPI: {item.cliente_dpi || '—'}
+                        </small>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
-            {can('aprobar_acreedor_final') && (
-              <div className="col-md-4">
-                <div className="inner-dark-box h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center" style={{ minHeight: '200px' }}>
-                  <button className="btn-modern-dark mb-3 w-100" type="button">
-                    Pendiente Aprobación
-                  </button>
+            <div className="col-md-4">
+              <div
+                className="inner-dark-box h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center"
+                style={{ minHeight: '200px' }}
+              >
+                <button
+                  className="btn-modern-dark mb-3 w-100"
+                  type="button"
+                  onClick={onOpenPendingApproval}
+                >
+                  Pendiente Aprobación
+                </button>
+
+                <div className="d-flex flex-column gap-2 w-100">
+                  {pendingApprovalItems.length === 0 ? (
+                    <span className="text-white-50 small">0 pendiente(s)</span>
+                  ) : (
+                    pendingApprovalItems.slice(0, 3).map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="reference-box p-2 text-start w-100"
+                        style={{ border: 'none' }}
+                        onClick={onOpenPendingApproval}
+                      >
+                        <strong className="text-white d-block">
+                          {item.cliente_nombre || 'Sin nombre'}
+                        </strong>
+                        <small className="text-gold">
+                          Q {formatMoney(item.monto_solicitado)}
+                        </small>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
-            {can('autorizar_desembolso') && (
+            {canSeeDisbursementCard && (
               <div className="col-md-4">
-                <div className="inner-dark-box border-gold-subtle h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center" style={{ minHeight: '200px' }}>
-                  <button className="btn-modern-dark mb-3 w-100" type="button">
+                <div
+                  className="inner-dark-box border-gold-subtle h-100 d-flex flex-column align-items-center justify-content-start p-4 text-center"
+                  style={{ minHeight: '200px' }}
+                >
+                  <button
+                    className="btn-modern-dark mb-3 w-100"
+                    type="button"
+                    onClick={onOpenPendingDisbursement}
+                  >
                     Pendiente Desembolso
                   </button>
+
+                  <div className="d-flex flex-column gap-2 w-100">
+                    {pendingDisbursementItems.length === 0 ? (
+                      <span className="text-white-50 small">0 pendiente(s)</span>
+                    ) : (
+                      pendingDisbursementItems.slice(0, 3).map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="reference-box p-2 text-start w-100"
+                          style={{ border: 'none' }}
+                          onClick={onOpenPendingDisbursement}
+                        >
+                          <strong className="text-white d-block">
+                            {item.cliente_nombre || 'Sin nombre'}
+                          </strong>
+                          <small className="text-gold">
+                            Q {formatMoney(item.monto_solicitado)}
+                          </small>
+                        </button>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -188,19 +389,28 @@ function DashboardHome({
         <>
           <div className="row g-4 mb-4">
             <div className="col-md-6">
-              <div className="extruded-card gold-solid-card d-flex align-items-center justify-content-center text-dark fw-bold" style={{ height: '300px' }}>
+              <div
+                className="extruded-card gold-solid-card d-flex align-items-center justify-content-center text-dark fw-bold"
+                style={{ height: '300px' }}
+              >
                 {canSeeReports ? 'Gráfica de Rendimiento' : 'Resumen de Caja'}
               </div>
             </div>
 
             <div className="col-md-6">
-              <div className="extruded-card d-flex align-items-center justify-content-center text-white-50" style={{ height: '300px' }}>
+              <div
+                className="extruded-card d-flex align-items-center justify-content-center text-white-50"
+                style={{ height: '300px' }}
+              >
                 {canSeeReports ? 'Gráfica de Cartera' : 'Historial de Caja'}
               </div>
             </div>
           </div>
 
-          <div className="extruded-card d-flex align-items-center justify-content-center text-white-50 w-100 mb-5" style={{ height: '250px' }}>
+          <div
+            className="extruded-card d-flex align-items-center justify-content-center text-white-50 w-100 mb-5"
+            style={{ height: '250px' }}
+          >
             {canSeeReports ? 'Reporte consolidado' : 'Movimientos recientes'}
           </div>
         </>
@@ -221,27 +431,158 @@ function PlaceholderModule({ title }: { title: string }) {
 function DashboardPage() {
   const navigate = useNavigate()
   const [user] = useState<SessionUser | null>(() => storage.getUser())
-  const [activeSection, setActiveSection] = useState<SectionKey>('inicio')
+  const [activeSection, setActiveSection] = useState<SectionKey>(() => {
+    const saved = sessionStorage.getItem(DASHBOARD_SECTION_KEY) as SectionKey | null
+    return saved ?? 'inicio'
+  })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const notificationsRef = useRef<HTMLDivElement | null>(null)
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [pendingPrequalificationItems, setPendingPrequalificationItems] =
+    useState<PendingPrequalificationItem[]>([])
+  const [pendingApprovalItems, setPendingApprovalItems] =
+    useState<PendingLoanItem[]>([])
+  const [pendingDisbursementItems, setPendingDisbursementItems] =
+    useState<PendingLoanItem[]>([])
 
   useEffect(() => {
     const token = storage.getToken()
 
     if (!token || !user) {
       storage.clearSession()
+      sessionStorage.removeItem(DASHBOARD_SECTION_KEY)
+      sessionStorage.removeItem(LOANS_TAB_KEY)
       navigate('/login', { replace: true })
     }
   }, [user, navigate])
 
+  useEffect(() => {
+    sessionStorage.setItem(DASHBOARD_SECTION_KEY, activeSection)
+  }, [activeSection])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setShowNotifications(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNotifications(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const run = async () => {
+      if (!user) return
+
+      const preqRequest = axios.get<PendingPrequalificationItem[]>(
+        `${API_BASE_URL}/creditors/pending-prequalification/`,
+        { headers: authHeaders() },
+      )
+
+      const loanRequest = axios.get<PendingLoanItem[]>(`${API_BASE_URL}/loans/pending/`, {
+        headers: authHeaders(),
+      })
+
+      const disbursementRequest = axios.get<PendingLoanItem[]>(
+        `${API_BASE_URL}/loans/pending-disbursement/`,
+        { headers: authHeaders() },
+      )
+
+      const [preqResult, loanResult, disbursementResult] = await Promise.allSettled([
+        preqRequest,
+        loanRequest,
+        disbursementRequest,
+      ])
+
+      if (cancelled) return
+
+      const preqItems = preqResult.status === 'fulfilled' ? preqResult.value.data || [] : []
+      const loanItems = loanResult.status === 'fulfilled' ? loanResult.value.data || [] : []
+      const disbItems =
+        disbursementResult.status === 'fulfilled'
+          ? disbursementResult.value.data || []
+          : []
+
+      setPendingPrequalificationItems(preqItems)
+      setPendingApprovalItems(loanItems)
+      setPendingDisbursementItems(disbItems)
+
+      setNotifications([
+        ...preqItems.slice(0, 5).map((item) => ({
+          id: `pre-${item.id}`,
+          kind: 'precalificacion' as const,
+          title: `Nuevo cliente: ${item.cliente_nombre || 'Sin nombre'}`,
+          subtitle: `Pendiente de precalificación • DPI: ${
+            item.cliente_dpi || '—'
+          }`,
+        })),
+        ...loanItems.slice(0, 5).map((item) => ({
+          id: `loan-${item.id}`,
+          kind: 'prestamo' as const,
+          title: `Préstamo #${item.id}`,
+          subtitle: `${item.cliente_nombre} • Q ${formatMoney(item.monto_solicitado)}`,
+        })),
+        ...disbItems.slice(0, 5).map((item) => ({
+          id: `disb-${item.id}`,
+          kind: 'desembolso' as const,
+          title: `Desembolso #${item.id}`,
+          subtitle: `${item.cliente_nombre} • Q ${formatMoney(item.monto_solicitado)}`,
+        })),
+      ])
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  if (!user) return null
+
   const displayName =
-    user?.full_name ||
-    `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() ||
-    user?.username ||
+    user.full_name ||
+    `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() ||
+    user.username ||
     'Usuario'
 
-  const displayRole = user?.role || 'Sin rol'
+  const displayRole = user.role || 'Sin rol'
 
   const can: CanAccess = (required) => hasPermission(user, required)
+  const roleLower = displayRole.trim().toLowerCase()
+  const isSecretaryRole = roleLower === 'secretaria'
+
+  const openLoansSection = (
+    tab: 'nueva' | 'solicitudes' | 'desembolsos' | 'simulador' | 'planes',
+    pendingSection?: 'clientes' | 'prestamos',
+  ) => {
+    sessionStorage.setItem(LOANS_TAB_KEY, tab)
+    if (pendingSection) {
+      sessionStorage.setItem(LOANS_PENDING_SECTION_KEY, pendingSection)
+    }
+    setActiveSection('prestamos')
+    setMobileMenuOpen(false)
+    setShowNotifications(false)
+  }
 
   const sections: SectionItem[] = [
     {
@@ -250,13 +591,27 @@ function DashboardPage() {
       visible: true,
     },
     {
-      key: 'acreedores',
-      label: 'ACREEDORES',
+      key: 'clientes',
+      label: 'CLIENTES',
       visible: can([
-        'crear_acreedor',
-        'buscar_acreedor',
+        'crear_cliente',
+        'buscar_cliente',
+        'ver_cliente',
         'validar_lista_negra',
         'ver_lista_negra',
+        'crear_acreedor',
+        'buscar_acreedor',
+      ]),
+    },
+    {
+      key: 'portafolio',
+      label: 'PORTAFOLIO',
+      visible: can([
+        'crear_cartera',
+        'editar_cartera',
+        'ver_cartera',
+        'asignar_cliente_cartera',
+        'asignar_acreedor_cartera',
       ]),
     },
     {
@@ -269,7 +624,21 @@ function DashboardPage() {
         'autorizar_desembolso',
         'ver_solicitudes_globales',
         'crear_planes_cobro',
+        'crear_plan_pago',
+        'ver_prestamo',
+        'simulador_pagos',
       ]),
+    },
+    {
+      key: 'asesores',
+      label: 'ASESORES',
+      visible:
+        !isSecretaryRole &&
+        can([
+          'transferir_cartera_entre_asesores',
+          'crear_cuentas_asesores',
+          'ver_usuario',
+        ]),
     },
     {
       key: 'pagos',
@@ -278,17 +647,23 @@ function DashboardPage() {
         'registrar_pago_cartera_propia',
         'registrar_pago_cualquier_acreedor',
         'ver_cobros_dia_propio',
+        'registrar_pago',
+        'ver_pago',
       ]),
     },
     {
       key: 'caja',
-      label: 'CAJA FUERTE',
-      visible: can([
-        'ingresar_recaudo_caja',
-        'aprobar_recaudo_caja',
-        'ver_historial_caja_fuerte',
-        'registrar_egresos_caja_fuerte',
-      ]),
+      label: 'CAJA',
+      visible:
+        !isSecretaryRole &&
+        can([
+          'ingresar_recaudo_caja',
+          'aprobar_recaudo_caja',
+          'ver_historial_caja_fuerte',
+          'registrar_egresos_caja_fuerte',
+          'gestionar_caja',
+          'ver_caja',
+        ]),
     },
     {
       key: 'reportes',
@@ -297,42 +672,85 @@ function DashboardPage() {
         'reportes_cartera_global',
         'reportes_rendimiento_todos_asesores',
         'ver_cobros_globales',
+        'ver_reportes',
       ]),
     },
     {
       key: 'bitacora',
       label: 'BITÁCORA SISTEMA',
-      visible: can('bitacora_sistema_lectura'),
+      visible: can(['bitacora_sistema_lectura', 'ver_bitacora']),
     },
   ]
 
   const visibleSections = sections.filter((section) => section.visible)
 
   const safeActiveSection: SectionKey =
-    visibleSections.some((section) => section.key === activeSection)
-      ? activeSection
-      : visibleSections[0]?.key ?? 'inicio'
+    activeSection === 'perfil'
+      ? 'perfil'
+      : visibleSections.some((section) => section.key === activeSection)
+        ? activeSection
+        : visibleSections[0]?.key ?? 'inicio'
 
   const handleLogout = () => {
     storage.clearSession()
+    sessionStorage.removeItem(DASHBOARD_SECTION_KEY)
+    sessionStorage.removeItem(LOANS_TAB_KEY)
+    setShowNotifications(false)
     navigate('/login', { replace: true })
   }
 
   const handleSectionChange = (section: SectionKey) => {
+    if (section === 'perfil') {
+      setActiveSection('perfil')
+      setMobileMenuOpen(false)
+      setShowNotifications(false)
+      return
+    }
+
     const found = sections.find((s) => s.key === section)
     if (!found?.visible) return
 
     setActiveSection(section)
     setMobileMenuOpen(false)
+    setShowNotifications(false)
+  }
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    if (item.kind === 'precalificacion') {
+      openLoansSection('solicitudes', 'clientes')
+      return
+    }
+
+    if (item.kind === 'desembolso') {
+      openLoansSection('desembolsos')
+      return
+    }
+
+    openLoansSection('solicitudes', 'prestamos')
   }
 
   const renderContent = () => {
     switch (safeActiveSection) {
-      case 'acreedores':
+      case 'perfil':
+        return (
+          <UserProfile
+            user={user}
+            onOpenPortfolio={() => setActiveSection('portafolio')}
+            onOpenRoute={() => setActiveSection('inicio')}
+          />
+        )
+
+      case 'clientes':
         return <CreditorsPage user={user} />
 
       case 'prestamos':
-        return <PlaceholderModule title="Préstamos" />
+        return <LoansPage user={user} />
+
+      case 'portafolio':
+        return <PortafolioPage user={user} />
+
+      case 'asesores':
+        return <AdvisorPage user={user} />
 
       case 'pagos':
         return <PlaceholderModule title="Pagos" />
@@ -348,11 +766,25 @@ function DashboardPage() {
 
       case 'inicio':
       default:
-        return <DashboardHome displayName={displayName} displayRole={displayRole} can={can} />
+        return (
+          <DashboardHome
+            displayName={displayName}
+            displayRole={displayRole}
+            can={can}
+            pendingPrequalificationItems={pendingPrequalificationItems}
+            pendingApprovalItems={pendingApprovalItems}
+            pendingDisbursementItems={pendingDisbursementItems}
+            onOpenPendingPrequalification={() =>
+              openLoansSection('solicitudes', 'clientes')
+            }
+            onOpenPendingApproval={() =>
+              openLoansSection('solicitudes', 'prestamos')
+            }
+            onOpenPendingDisbursement={() => openLoansSection('desembolsos')}
+          />
+        )
     }
   }
-
-  if (!user) return null
 
   return (
     <div className="vh-100 d-flex overflow-hidden dashboard-container">
@@ -380,24 +812,36 @@ function DashboardPage() {
           className="profile-link d-flex align-items-center mb-5 mt-2 p-2 rounded-3 transition-all"
           role="button"
           title="Ver perfil"
+          onClick={() => handleSectionChange('perfil')}
         >
-          <div className="user-avatar d-flex align-items-center justify-content-center rounded-circle me-3 shadow-sm">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" fill="#ffffff" />
-              <path
-                d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
-                stroke="#ffffff"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
+          <div className="user-avatar d-flex align-items-center justify-content-center rounded-circle me-3 shadow-sm overflow-hidden">
+            {user.ruta_foto_perfil ? (
+              <img
+                src={user.ruta_foto_perfil}
+                alt="Foto de perfil"
+                className="w-100 h-100"
+                style={{ objectFit: 'cover' }}
               />
-            </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="8" r="4" fill="#ffffff" />
+                <path
+                  d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
           </div>
           <div className="d-flex flex-column">
             <h5 className="text-white mb-0 fw-bold" style={{ fontSize: '1.1rem' }}>
               {displayName}
             </h5>
-            <span style={{ fontSize: '0.75rem', color: '#cca641' }}>{displayRole}</span>
+            <span style={{ fontSize: '0.75rem', color: '#cca641' }}>
+              {displayRole}
+            </span>
           </div>
         </div>
 
@@ -420,7 +864,14 @@ function DashboardPage() {
             type="button"
             onClick={handleLogout}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -433,41 +884,105 @@ function DashboardPage() {
       <div className="main-panel d-flex flex-column flex-fill w-100 position-relative z-1">
         <div className="top-navbar d-flex align-items-center px-4">
           <div className="flex-fill d-flex justify-content-center">
-            <div className="input-custom mx-auto shadow-sm" style={{ width: '100%', maxWidth: '400px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="me-2 text-white-50">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="2" />
+            <div
+              className="input-custom mx-auto shadow-sm"
+              style={{ width: '100%', maxWidth: '400px' }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="me-2 text-white-50"
+              >
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="8"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+                <line
+                  x1="21"
+                  y1="21"
+                  x2="16.65"
+                  y2="16.65"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
               </svg>
               <input type="text" placeholder="Buscar cliente por DPI o Nombre..." />
             </div>
           </div>
 
-          <div className="dropdown ms-3">
+          <div className="ms-3 position-relative" ref={notificationsRef}>
             <button
               className="btn btn-link p-0 text-white text-decoration-none notification-btn position-relative"
               type="button"
               id="dropdownNotificaciones"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
+              aria-expanded={showNotifications}
+              aria-haspopup="true"
+              onClick={() => setShowNotifications((prev) => !prev)}
             >
               <div className="notification-icon-container d-flex align-items-center justify-content-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
-                <span className="position-absolute top-0 start-100 translate-middle p-1 border border-dark rounded-circle alert-dot"></span>
+                {notifications.length > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle p-1 border border-dark rounded-circle alert-dot"></span>
+                )}
               </div>
             </button>
 
-            <ul className="dropdown-menu dropdown-menu-end glass-dropdown shadow-lg mt-2" aria-labelledby="dropdownNotificaciones">
-              <li className="dropdown-header text-white border-bottom border-secondary pb-2 mb-2 fw-bold">
-                Notificaciones Recientes
-              </li>
-              <li><a className="dropdown-item py-2" href="#">Cliente Juan Pérez atrasado</a></li>
-              <li><a className="dropdown-item py-2" href="#">Préstamo aprobado a María López</a></li>
-              <li><hr className="dropdown-divider border-secondary my-2" /></li>
-              <li><a className="dropdown-item py-2 text-center text-gold fw-bold" href="#">Ver todas</a></li>
-            </ul>
+            {showNotifications && (
+              <ul
+                className="dropdown-menu dropdown-menu-end glass-dropdown shadow-lg mt-2 show"
+                aria-labelledby="dropdownNotificaciones"
+                style={{
+                  display: 'block',
+                  position: 'absolute',
+                  right: 0,
+                  top: '100%',
+                  zIndex: 9999,
+                  minWidth: '320px',
+                }}
+              >
+                <li className="dropdown-header text-white border-bottom border-secondary pb-2 mb-2 fw-bold">
+                  Notificaciones Recientes
+                </li>
+
+                {notifications.length === 0 ? (
+                  <li>
+                    <span className="dropdown-item py-2 text-white-50">
+                      Sin notificaciones nuevas.
+                    </span>
+                  </li>
+                ) : (
+                  notifications.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        className="dropdown-item py-2"
+                        type="button"
+                        onClick={() => handleNotificationClick(item)}
+                      >
+                        <div className="fw-bold">{item.title}</div>
+                        <div className="small text-white-50">{item.subtitle}</div>
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -478,4 +993,5 @@ function DashboardPage() {
     </div>
   )
 }
+
 export default DashboardPage

@@ -5,6 +5,14 @@ from apps.users.models import Usuario
 
 class Cartera(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_cartera")
+    usuario_responsable = models.ForeignKey(
+        Usuario,
+        on_delete=models.DO_NOTHING,
+        db_column="id_usuario_responsable",
+        related_name="carteras_propias",
+        null=True,
+        blank=True,
+    )
     nombre_cartera = models.CharField(max_length=120, db_column="nombre_cartera")
     fecha_inicio = models.DateField(null=True, blank=True, db_column="fecha_inicio")
     fecha_fin = models.DateField(null=True, blank=True, db_column="fecha_fin")
@@ -19,13 +27,13 @@ class Cartera(models.Model):
         return self.nombre_cartera
 
 
-class Acreedor(models.Model):
-    id = models.BigAutoField(primary_key=True, db_column="id_acreedor")
+class Cliente(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column="id_cliente")
     cartera = models.ForeignKey(
         Cartera,
         on_delete=models.DO_NOTHING,
         db_column="id_cartera",
-        related_name="acreedores",
+        related_name="clientes",
         null=True,
         blank=True,
     )
@@ -33,7 +41,7 @@ class Acreedor(models.Model):
         Usuario,
         on_delete=models.DO_NOTHING,
         db_column="id_asesor",
-        related_name="acreedores_asignados",
+        related_name="clientes_asignados",
         null=True,
         blank=True,
     )
@@ -62,24 +70,24 @@ class Acreedor(models.Model):
     estado_cliente = models.CharField(max_length=30, db_column="estado_cliente")
 
     class Meta:
-        db_table = "acreedores"
+        db_table = "clientes"
         managed = False
         ordering = ["-id"]
 
     def __str__(self):
-        return f"{self.nombres} {self.apellidos}".strip()
+        return self.nombre_completo
 
     @property
     def nombre_completo(self) -> str:
         return f"{self.nombres} {self.apellidos}".strip()
 
 
-class TelefonoAcreedor(models.Model):
+class TelefonoCliente(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_telefono")
-    acreedor = models.ForeignKey(
-        Acreedor,
+    cliente = models.ForeignKey(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="telefonos",
     )
     numero = models.CharField(max_length=20, db_column="numero")
@@ -87,27 +95,27 @@ class TelefonoAcreedor(models.Model):
     tipo = models.CharField(max_length=30, db_column="tipo", null=True, blank=True)
 
     class Meta:
-        db_table = "telefonos_acreedor"
+        db_table = "telefonos_cliente"
         managed = False
-        ordering = ["acreedor_id", "orden"]
+        ordering = ["cliente_id", "orden"]
 
     def __str__(self):
         return self.numero
 
 
-class FotoAcreedor(models.Model):
-    id = models.BigAutoField(primary_key=True, db_column="id_foto_acreedor")
-    acreedor = models.ForeignKey(
-        Acreedor,
+class FotoCliente(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column="id_foto_cliente")
+    cliente = models.ForeignKey(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="fotos",
     )
     ruta_archivo = models.TextField(db_column="ruta_archivo")
     descripcion = models.TextField(db_column="descripcion", null=True, blank=True)
 
     class Meta:
-        db_table = "fotos_acreedor"
+        db_table = "fotos_cliente"
         managed = False
         ordering = ["id"]
 
@@ -117,10 +125,10 @@ class FotoAcreedor(models.Model):
 
 class InformacionLaboral(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_info_laboral")
-    acreedor = models.OneToOneField(
-        Acreedor,
+    cliente = models.OneToOneField(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="informacion_laboral",
     )
     lugar_trabajo = models.CharField(max_length=150, db_column="lugar_trabajo", null=True, blank=True)
@@ -147,15 +155,15 @@ class InformacionLaboral(models.Model):
         managed = False
 
     def __str__(self):
-        return f"Laboral de {self.acreedor}"
+        return f"Laboral de {self.cliente}"
 
 
-class ReferenciaAcreedor(models.Model):
+class ReferenciaCliente(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_referencia")
-    acreedor = models.ForeignKey(
-        Acreedor,
+    cliente = models.ForeignKey(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="referencias",
     )
     nombres = models.CharField(max_length=150, db_column="nombres")
@@ -164,7 +172,7 @@ class ReferenciaAcreedor(models.Model):
     direccion = models.TextField(db_column="direccion", null=True, blank=True)
 
     class Meta:
-        db_table = "referencias_acreedor"
+        db_table = "referencias_cliente"
         managed = False
         ordering = ["id"]
 
@@ -174,10 +182,10 @@ class ReferenciaAcreedor(models.Model):
 
 class InformeNuevoCliente(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_informe")
-    acreedor = models.ForeignKey(
-        Acreedor,
+    cliente = models.ForeignKey(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="informes",
     )
     usuario_creador = models.ForeignKey(
@@ -196,7 +204,7 @@ class InformeNuevoCliente(models.Model):
         ordering = ["-id"]
 
     def __str__(self):
-        return f"Informe {self.id} - {self.acreedor}"
+        return f"Informe {self.id} - {self.cliente}"
 
 
 class ListaNegra(models.Model):
@@ -212,26 +220,26 @@ class ListaNegra(models.Model):
         return f"Lista Negra {self.id}"
 
 
-class ListaNegraAcreedor(models.Model):
-    id = models.BigAutoField(primary_key=True, db_column="id_lista_negra_acreedor")
+class ListaNegraCliente(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column="id_lista_negra_cliente")
     lista_negra = models.ForeignKey(
         ListaNegra,
         on_delete=models.DO_NOTHING,
         db_column="id_lista_negra",
         related_name="registros",
     )
-    acreedor = models.ForeignKey(
-        Acreedor,
+    cliente = models.ForeignKey(
+        Cliente,
         on_delete=models.DO_NOTHING,
-        db_column="id_acreedor",
+        db_column="id_cliente",
         related_name="registros_lista_negra",
     )
     fecha_ingreso = models.DateTimeField(db_column="fecha_ingreso")
 
     class Meta:
-        db_table = "lista_negra_acreedor"
+        db_table = "lista_negra_cliente"
         managed = False
         ordering = ["-id"]
 
     def __str__(self):
-        return f"{self.acreedor} en lista negra"
+        return f"{self.cliente} en lista negra"

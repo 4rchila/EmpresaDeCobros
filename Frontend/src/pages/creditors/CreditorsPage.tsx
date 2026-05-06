@@ -4,101 +4,101 @@ import {
   useMemo,
   useState,
   type FormEvent,
-} from 'react';
-import axios, { type AxiosError } from 'axios';
-import '../dashboard/dashboard.css';
-import './creditors.css';
+} from 'react'
+import axios, { type AxiosError } from 'axios'
+import '../dashboard/dashboard.css'
+import './creditors.css'
 import {
   API_BASE_URL,
   authHeaders,
   hasPermission,
   type SessionUser,
-} from '../../lib';
+} from '../../lib'
 
-type CreditorsTabKey = 'nuevo' | 'buscar' | 'lista_negra';
+type CreditorsTabKey = 'nuevo' | 'buscar' | 'lista_negra'
 
 type CreditorsPageProps = {
-  user: SessionUser | null;
-};
+  user: SessionUser | null
+}
 
 type TabConfig = {
-  key: CreditorsTabKey;
-  label: string;
-  visible: boolean;
-};
+  key: CreditorsTabKey
+  label: string
+  visible: boolean
+}
 
 type SearchResult = {
-  id: number;
-  nombre_completo: string;
-  nombres: string;
-  apellidos: string;
-  dpi: string | null;
-  nit: string | null;
-  direccion: string | null;
-  municipio: string | null;
-  distrito: string | null;
-  departamento: string | null;
-  estado_cliente: string;
-  fecha_registro: string;
+  id: number
+  nombre_completo: string
+  nombres: string
+  apellidos: string
+  dpi: string | null
+  nit: string | null
+  direccion: string | null
+  municipio: string | null
+  distrito: string | null
+  departamento: string | null
+  estado_cliente: string
+  fecha_registro: string
   telefonos: Array<{
-    id: number;
-    numero: string;
-    orden: number;
-    tipo: string | null;
-  }>;
-  en_lista_negra: boolean;
-  asesor_nombre: string | null;
-};
+    id: number
+    numero: string
+    orden: number
+    tipo: string | null
+  }>
+  en_lista_negra: boolean
+  asesor_nombre: string | null
+}
 
 type BlacklistItem = {
-  id: number;
-  fecha_ingreso: string;
-  acreedor: SearchResult;
-};
+  id: number
+  fecha_ingreso: string
+  acreedor: SearchResult
+}
 
 type ReferenceForm = {
-  nombres: string;
-  apellidos: string;
-  telefono: string;
-  parentesco: string;
-  direccion: string;
-};
+  nombres: string
+  apellidos: string
+  telefono: string
+  parentesco: string
+  direccion: string
+}
 
 type FormState = {
-  nombres: string;
-  apellidos: string;
-  dpi: string;
-  nit: string;
-  fecha_nacimiento: string;
+  nombres: string
+  apellidos: string
+  dpi: string
+  nit: string
+  fecha_nacimiento: string
 
-  telefono_principal: string;
-  telefono_secundario: string;
-  telefono_trabajo: string;
+  telefono_principal: string
+  telefono_secundario: string
+  telefono_trabajo: string
 
-  direccion: string;
-  departamento: string;
-  municipio: string;
-  distrito: string;
+  direccion: string
+  departamento: string
+  municipio: string
+  distrito: string
 
-  lugar_trabajo: string;
-  direccion_trabajo: string;
-  puesto: string;
-  tiempo_laborando: string;
-  ingresos_mensuales: string;
-  egreso_aproximado_mensual: string;
-  otras_fuentes_ingreso: string;
+  lugar_trabajo: string
+  direccion_trabajo: string
+  puesto: string
+  tiempo_laborando: string
+  ingresos_mensuales: string
+  egreso_aproximado_mensual: string
+  otras_fuentes_ingreso: string
 
-  foto_vivienda: string;
-  foto_recibo_luz: string;
+  foto_vivienda: string
+  foto_recibo_luz: string
 
-  observaciones: string;
-};
+  observaciones: string
+}
 
 type ErrorResponseData = {
-  detail?: string;
-  dpi?: string[];
-  referencias?: string[];
-};
+  detail?: string
+  dpi?: string[]
+  referencias?: string[]
+}
 
 const INITIAL_FORM: FormState = {
   nombres: '',
@@ -128,96 +128,154 @@ const INITIAL_FORM: FormState = {
   foto_recibo_luz: '',
 
   observaciones: '',
-};
+}
 
 const INITIAL_REFERENCES: ReferenceForm[] = [
   { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
   { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
   { nombres: '', apellidos: '', telefono: '', parentesco: '', direccion: '' },
-];
+]
+
+// Mapa de departamentos a municipios
+const MUNICIPALITIES_MAP: Record<string, string[]> = {
+  Totonicapan: [
+    'Totonicapán (Cabecera)',
+    'San Cristóbal Totonicapán',
+    'San Francisco El Alto',
+    'Santa María Chiquimula',
+    'San Bartolo',
+    'San Andrés Xecul',
+    'Momostenango',
+    'Santa Lucía la Reforma',
+
+  ],
+  Quetzaltenango: [
+    'Quetzaltenango (Cabecera)',
+    'Salcajá',
+    'Olintepeque',
+    'San Carlos Sija',
+    'Sibilia',
+    'Cabricán',
+    'Cajolá',
+    'San Miguel Sigüilá',
+    'Ostuncalco',
+    'San Mateo',
+    'Concepción Chiquirichapa',
+    'San Martín Sacatepéquez',
+    'Almolonga',
+    'Cantel',
+    'Zunil',
+    'Colomba Costa Cuca',
+    'El Palmar',
+    'Coatepeque',
+    'Génova',
+    'Flores Costa Cuca',
+    'La Esperanza',
+    'Palestina de los Altos',
+    'Huitán',
+    'San Francisco La Unión',
+  ],
+  Guatemala: [
+    'Guatemala (Cabecera)',
+    'Santa Catarina Pinula',
+    'San José Pinula',
+    'San José del Golfo',
+    'Palencia',
+    'Chinautla',
+    'San Pedro Ayampuc',
+    'Mixco',
+    'San Pedro Sacatepéquez',
+    'San Juan Sacatepéquez',
+    'San Raymundo',
+    'Chuarrancho',
+    'Fraijanes',
+    'Amatitlán',
+    'Villa Nueva',
+    'Villa Canales',
+    'Petapa'
+
+  ],
+}
 
 function getErrorDetail(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<ErrorResponseData>;
-    const data = axiosError.response?.data;
+    const axiosError = error as AxiosError<ErrorResponseData>
+    const data = axiosError.response?.data
 
     if (typeof data?.detail === 'string' && data.detail.trim()) {
-      return data.detail;
+      return data.detail
     }
 
     if (Array.isArray(data?.dpi) && typeof data.dpi[0] === 'string') {
-      return data.dpi[0];
+      return data.dpi[0]
     }
 
     if (
       Array.isArray(data?.referencias) &&
       typeof data.referencias[0] === 'string'
     ) {
-      return data.referencias[0];
+      return data.referencias[0]
     }
   }
 
-  return fallback;
+  return fallback
 }
 
 function CreditorsPage({ user }: CreditorsPageProps) {
-  const [activeTab, setActiveTab] = useState<CreditorsTabKey>('nuevo');
+  const [activeTab, setActiveTab] = useState<CreditorsTabKey>('nuevo')
 
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [references, setReferences] =
-    useState<ReferenceForm[]>(INITIAL_REFERENCES);
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [saveError, setSaveError] = useState('');
+    useState<ReferenceForm[]>(INITIAL_REFERENCES)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
-  const [blacklistLoading, setBlacklistLoading] = useState(false);
-  const [blacklistError, setBlacklistError] = useState('');
-  const [blacklistItems, setBlacklistItems] = useState<BlacklistItem[]>([]);
-  const [blacklistQuery, setBlacklistQuery] = useState('');
+  const [blacklistLoading, setBlacklistLoading] = useState(false)
+  const [blacklistError, setBlacklistError] = useState('')
+  const [blacklistItems, setBlacklistItems] = useState<BlacklistItem[]>([])
+  const [blacklistQuery, setBlacklistQuery] = useState('')
 
-  const [blacklistCandidateQuery, setBlacklistCandidateQuery] = useState('');
+  const [blacklistCandidateQuery, setBlacklistCandidateQuery] = useState('')
   const [blacklistCandidates, setBlacklistCandidates] = useState<SearchResult[]>(
     [],
-  );
+  )
   const [blacklistCandidateLoading, setBlacklistCandidateLoading] =
-    useState(false);
+    useState(false)
   const [blacklistActionLoading, setBlacklistActionLoading] = useState<
     number | null
-  >(null);
-  const [blacklistActionMessage, setBlacklistActionMessage] = useState('');
+  >(null)
+  const [blacklistActionMessage, setBlacklistActionMessage] = useState('')
 
-  const canCreate = hasPermission(user, 'crear_acreedor');
+  const canCreate = hasPermission(user, 'crear_cliente')
   const canSearch = hasPermission(user, [
-    'buscar_acreedor',
-    'crear_acreedor',
-    'ver_acreedores_globales',
-  ]);
-  const canValidateBlacklist = hasPermission(user, 'validar_lista_negra');
-  const canViewBlacklist = hasPermission(user, 'ver_lista_negra');
-  const canAssignBlacklist = hasPermission(user, [
-    'asignar_lista_negra',
-    'agregar_lista_negra',
-  ]);
+    'buscar_cliente',
+    'crear_cliente',
+    'ver_cliente',
+  ])
+  const canValidateBlacklist = hasPermission(user, 'validar_lista_negra')
+  const canViewBlacklist = hasPermission(user, 'ver_lista_negra')
+  const canAssignBlacklist = hasPermission(user, 'agregar_lista_negra')
 
-  const roleName = user?.role?.trim().toLowerCase() ?? '';
+  const roleName = user?.role?.trim().toLowerCase() ?? ''
   const hideBlacklistForRole =
-    roleName === 'asesor' || roleName === 'secretaria';
+    roleName === 'asesor' || roleName === 'secretaria'
 
   const tabs = useMemo<TabConfig[]>(
     () => [
       {
         key: 'nuevo',
-        label: 'Nuevo Acreedor',
+        label: 'Nuevo Cliente',
         visible: canCreate,
       },
       {
         key: 'buscar',
-        label: 'Buscar Acreedor',
+        label: 'Buscar Cliente',
         visible: canSearch,
       },
       {
@@ -234,19 +292,32 @@ function CreditorsPage({ user }: CreditorsPageProps) {
       canViewBlacklist,
       hideBlacklistForRole,
     ],
-  );
+  )
 
-  const visibleTabs = tabs.filter((tab) => tab.visible);
+  const visibleTabs = tabs.filter((tab) => tab.visible)
 
   const safeActiveTab: CreditorsTabKey = visibleTabs.some(
     (tab) => tab.key === activeTab,
   )
     ? activeTab
-    : visibleTabs[0]?.key ?? 'buscar';
+    : visibleTabs[0]?.key ?? 'buscar'
 
   const updateForm = (field: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // Lista de municipios según el departamento seleccionado
+  const municipalities = useMemo(
+    () => MUNICIPALITIES_MAP[form.departamento] ?? [],
+    [form.departamento],
+  )
+
+  // Si se cambia el departamento y el municipio actual no está en la nueva lista, limpiarlo
+  useEffect(() => {
+    if (form.municipio && !municipalities.includes(form.municipio)) {
+      updateForm('municipio', '')
+    }
+  }, [form.departamento, municipalities]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateReference = (
     index: number,
@@ -255,21 +326,21 @@ function CreditorsPage({ user }: CreditorsPageProps) {
   ) => {
     setReferences((prev) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    );
-  };
+    )
+  }
 
   const handlePhotoSelection = (
     field: 'foto_vivienda' | 'foto_recibo_luz',
     file: File | null,
   ) => {
-    if (!file) return;
-    updateForm(field, file.name);
-  };
+    if (!file) return
+    updateForm(field, file.name)
+  }
 
   const resetCreateForm = () => {
-    setForm(INITIAL_FORM);
-    setReferences(INITIAL_REFERENCES);
-  };
+    setForm(INITIAL_FORM)
+    setReferences(INITIAL_REFERENCES)
+  }
 
   const buildCreatePayload = () => {
     const cleanedReferences = references
@@ -283,7 +354,7 @@ function CreditorsPage({ user }: CreditorsPageProps) {
       .filter(
         (ref, index) =>
           index === 0 || ref.nombres || ref.apellidos || ref.telefono,
-      );
+      )
 
     return {
       nombres: form.nombres.trim(),
@@ -314,45 +385,122 @@ function CreditorsPage({ user }: CreditorsPageProps) {
 
       observaciones: form.observaciones.trim(),
       referencias: cleanedReferences,
-    };
-  };
+    }
+  }
 
   const handleCreateSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
-    event.preventDefault();
-    setSaveError('');
-    setSaveMessage('');
+    event.preventDefault()
+    setSaveError('')
+    setSaveMessage('')
 
-    if (!references[0].nombres.trim()) {
-      setSaveError('La referencia 1 es obligatoria.');
-      return;
+    const hasDigit = (s: string) => /\d/.test(s)
+    // validaciones cliente-lado
+    if (!form.nombres.trim() || hasDigit(form.nombres)) {
+      setSaveError('El nombre no puede contener números y es obligatorio.')
+      return
+    }
+    if (!form.apellidos.trim() || hasDigit(form.apellidos)) {
+      setSaveError('Los apellidos no pueden contener números y son obligatorios.')
+      return
+    }
+    const dpiDigits = (form.dpi || '').replace(/\D/g, '')
+    if (dpiDigits.length !== 13) {
+      setSaveError('El DPI debe contener exactamente 13 dígitos.')
+      return
     }
 
-    setSaving(true);
+    // Validación NIT: opcional, pero si se proporciona debe ser 13 caracteres alfanuméricos
+    const nitClean = (form.nit || '').replace(/\s/g, '')
+    if (nitClean && !/^[A-Za-z0-9]{13}$/.test(nitClean)) {
+      setSaveError('El NIT debe contener exactamente 13 caracteres alfanuméricos si se proporciona.')
+      return
+    }
+
+    const cleanPhone = (p: string) => (p || '').replace(/\D/g, '')
+    if (cleanPhone(form.telefono_principal).length !== 8) {
+      setSaveError('El teléfono principal debe contener exactamente 8 dígitos.')
+      return
+    }
+    if (form.telefono_secundario && cleanPhone(form.telefono_secundario).length !== 8) {
+      setSaveError('El teléfono secundario debe contener exactamente 8 dígitos si se proporciona.')
+      return
+    }
+    if (form.telefono_trabajo && cleanPhone(form.telefono_trabajo).length !== 8) {
+      setSaveError('El teléfono de trabajo debe contener exactamente 8 dígitos si se proporciona.')
+      return
+    }
+    if (form.lugar_trabajo && hasDigit(form.lugar_trabajo)) {
+      setSaveError('El lugar de trabajo no puede contener números.')
+      return
+    }
+    if (form.puesto && hasDigit(form.puesto)) {
+      setSaveError('El puesto no puede contener números.')
+      return
+    }
+
+    // Validar ingresos y egresos: deben ser números y no negativos
+    const ingresosNum = Number(form.ingresos_mensuales)
+    const egresosNum = Number(form.egreso_aproximado_mensual)
+    if (Number.isNaN(ingresosNum) || ingresosNum < 0) {
+      setSaveError('Los ingresos mensuales deben ser un número mayor o igual a 0.')
+      return
+    }
+    if (Number.isNaN(egresosNum) || egresosNum < 0) {
+      setSaveError('Los egresos mensuales deben ser un número mayor o igual a 0.')
+      return
+    }
+
+    // validar referencias
+    for (let i = 0; i < references.length; i++) {
+      const r = references[i]
+      if (!r.nombres.trim()) {
+        if (i === 0) {
+          setSaveError('La referencia 1 es obligatoria.')
+          return
+        }
+        continue
+      }
+      if (hasDigit(r.nombres) || (r.apellidos && hasDigit(r.apellidos)) || (r.parentesco && hasDigit(r.parentesco))) {
+        setSaveError('Los nombres/apellidos/parentesco de las referencias no pueden contener números.')
+        return
+      }
+      if (r.telefono && r.telefono.replace(/\D/g, '').length !== 8) {
+        setSaveError('El teléfono de referencia debe contener exactamente 8 dígitos si se proporciona.')
+        return
+      }
+    }
+    // normal flow
+    if (!references[0].nombres.trim()) {
+      setSaveError('La referencia 1 es obligatoria.')
+      return
+    }
+
+    setSaving(true)
 
     try {
-      const payload = buildCreatePayload();
+      const payload = buildCreatePayload()
 
       await axios.post(`${API_BASE_URL}/creditors/`, payload, {
         headers: {
           ...authHeaders(),
           'Content-Type': 'application/json',
         },
-      });
+      })
 
-      setSaveMessage('Acreedor registrado correctamente.');
-      resetCreateForm();
+      setSaveMessage('Cliente registrado correctamente.')
+      resetCreateForm()
     } catch (error: unknown) {
-      setSaveError(getErrorDetail(error, 'No se pudo registrar el acreedor.'));
+      setSaveError(getErrorDetail(error, 'No se pudo registrar el cliente.'))
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleSearch = async (): Promise<void> => {
-    setSearchError('');
-    setSearching(true);
+    setSearchError('')
+    setSearching(true)
 
     try {
       const { data } = await axios.get<SearchResult[]>(
@@ -361,23 +509,23 @@ function CreditorsPage({ user }: CreditorsPageProps) {
           params: { q: searchQuery.trim() },
           headers: authHeaders(),
         },
-      );
+      )
 
-      setSearchResults(data);
+      setSearchResults(data)
     } catch (error: unknown) {
       setSearchError(
         getErrorDetail(error, 'No se pudo realizar la búsqueda.'),
-      );
-      setSearchResults([]);
+      )
+      setSearchResults([])
     } finally {
-      setSearching(false);
+      setSearching(false)
     }
-  };
+  }
 
   const loadBlacklist = useCallback(
     async (query: string = blacklistQuery.trim()): Promise<void> => {
-      setBlacklistError('');
-      setBlacklistLoading(true);
+      setBlacklistError('')
+      setBlacklistLoading(true)
 
       try {
         const { data } = await axios.get<BlacklistItem[]>(
@@ -386,24 +534,24 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             params: query ? { q: query } : {},
             headers: authHeaders(),
           },
-        );
+        )
 
-        setBlacklistItems(data);
+        setBlacklistItems(data)
       } catch (error: unknown) {
         setBlacklistError(
           getErrorDetail(error, 'No se pudo cargar la lista negra.'),
-        );
-        setBlacklistItems([]);
+        )
+        setBlacklistItems([])
       } finally {
-        setBlacklistLoading(false);
+        setBlacklistLoading(false)
       }
     },
     [blacklistQuery],
-  );
+  )
 
   const handleBlacklistCandidateSearch = async (): Promise<void> => {
-    setBlacklistActionMessage('');
-    setBlacklistCandidateLoading(true);
+    setBlacklistActionMessage('')
+    setBlacklistCandidateLoading(true)
 
     try {
       const { data } = await axios.get<SearchResult[]>(
@@ -412,55 +560,59 @@ function CreditorsPage({ user }: CreditorsPageProps) {
           params: { q: blacklistCandidateQuery.trim() },
           headers: authHeaders(),
         },
-      );
+      )
 
-      setBlacklistCandidates(data);
+      setBlacklistCandidates(data)
     } catch {
-      setBlacklistCandidates([]);
+      setBlacklistCandidates([])
     } finally {
-      setBlacklistCandidateLoading(false);
+      setBlacklistCandidateLoading(false)
     }
-  };
+  }
 
-  const handleAddToBlacklist = async (acreedorId: number): Promise<void> => {
-    setBlacklistActionMessage('');
-    setBlacklistActionLoading(acreedorId);
+  const handleAddToBlacklist = async (clienteId: number): Promise<void> => {
+    setBlacklistActionMessage('')
+    setBlacklistActionLoading(clienteId)
 
     try {
       await axios.post(
         `${API_BASE_URL}/creditors/blacklist/`,
-        { acreedor_id: acreedorId },
+        { cliente_id: clienteId },
         {
           headers: {
             ...authHeaders(),
             'Content-Type': 'application/json',
           },
         },
-      );
+      )
 
-      setBlacklistActionMessage('Acreedor agregado a lista negra.');
-      await loadBlacklist();
-      await handleBlacklistCandidateSearch();
+      setBlacklistActionMessage('Cliente agregado a lista negra.')
+      await loadBlacklist()
+      await handleBlacklistCandidateSearch()
     } catch (error: unknown) {
       setBlacklistActionMessage(
         getErrorDetail(error, 'No se pudo agregar a lista negra.'),
-      );
+      )
     } finally {
-      setBlacklistActionLoading(null);
+      setBlacklistActionLoading(null)
     }
-  };
+  }
 
   useEffect(() => {
-    if (safeActiveTab === 'lista_negra' && !hideBlacklistForRole && canViewBlacklist) {
-      void loadBlacklist();
+    if (
+      safeActiveTab === 'lista_negra' &&
+      !hideBlacklistForRole &&
+      canViewBlacklist
+    ) {
+      void loadBlacklist()
     }
-  }, [safeActiveTab, hideBlacklistForRole, canViewBlacklist, loadBlacklist]);
+  }, [safeActiveTab, hideBlacklistForRole, canViewBlacklist, loadBlacklist])
 
   const renderView = () => {
     switch (safeActiveTab) {
       case 'nuevo':
         return canCreate ? (
-          <VistaNuevoAcreedor
+          <VistaNuevoCliente
             form={form}
             references={references}
             saving={saving}
@@ -470,14 +622,15 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             onReferenceChange={updateReference}
             onPhotoSelection={handlePhotoSelection}
             onSubmit={handleCreateSubmit}
+            municipalities={municipalities} // <-- pasar municipios dinámicos
           />
         ) : (
-          <VistaSinPermiso mensaje="No tienes permiso para registrar acreedores." />
-        );
+          <VistaSinPermiso mensaje="No tienes permiso para registrar clientes." />
+        )
 
       case 'buscar':
         return canSearch ? (
-          <VistaBuscarAcreedor
+          <VistaBuscarCliente
             query={searchQuery}
             onQueryChange={setSearchQuery}
             onSearch={handleSearch}
@@ -486,8 +639,8 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             results={searchResults}
           />
         ) : (
-          <VistaSinPermiso mensaje="No tienes permiso para consultar acreedores." />
-        );
+          <VistaSinPermiso mensaje="No tienes permiso para consultar clientes." />
+        )
 
       case 'lista_negra':
         return !hideBlacklistForRole &&
@@ -499,7 +652,7 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             blacklistQuery={blacklistQuery}
             setBlacklistQuery={setBlacklistQuery}
             onLoadBlacklist={() => {
-              void loadBlacklist();
+              void loadBlacklist()
             }}
             blacklistLoading={blacklistLoading}
             blacklistError={blacklistError}
@@ -507,23 +660,23 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             candidateQuery={blacklistCandidateQuery}
             setCandidateQuery={setBlacklistCandidateQuery}
             onSearchCandidates={() => {
-              void handleBlacklistCandidateSearch();
+              void handleBlacklistCandidateSearch()
             }}
             candidateLoading={blacklistCandidateLoading}
             candidates={blacklistCandidates}
             onAddToBlacklist={(id) => {
-              void handleAddToBlacklist(id);
+              void handleAddToBlacklist(id)
             }}
             actionLoading={blacklistActionLoading}
             actionMessage={blacklistActionMessage}
           />
         ) : (
           <VistaSinPermiso mensaje="No tienes permiso para consultar la lista negra." />
-        );
+        )
 
       default:
         return (
-          <VistaBuscarAcreedor
+          <VistaBuscarCliente
             query=""
             onQueryChange={() => {}}
             onSearch={() => {}}
@@ -531,14 +684,14 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             error=""
             results={[]}
           />
-        );
+        )
     }
-  };
+  }
 
   if (visibleTabs.length === 0) {
     return (
-      <VistaSinPermiso mensaje="Tu rol no tiene acceso al módulo de acreedores." />
-    );
+      <VistaSinPermiso mensaje="Tu rol no tiene acceso al módulo de clientes." />
+    )
   }
 
   return (
@@ -562,7 +715,7 @@ function CreditorsPage({ user }: CreditorsPageProps) {
         {renderView()}
       </div>
     </div>
-  );
+  )
 }
 
 function VistaSinPermiso({ mensaje }: { mensaje: string }) {
@@ -590,10 +743,10 @@ function VistaSinPermiso({ mensaje }: { mensaje: string }) {
       <h4 className="text-white fw-bold mb-2">Acceso restringido</h4>
       <p className="text-white-50 mb-0">{mensaje}</p>
     </div>
-  );
+  )
 }
 
-function VistaNuevoAcreedor({
+function VistaNuevoCliente({
   form,
   references,
   saving,
@@ -603,23 +756,25 @@ function VistaNuevoAcreedor({
   onReferenceChange,
   onPhotoSelection,
   onSubmit,
+  municipalities, // nuevo prop
 }: {
-  form: FormState;
-  references: ReferenceForm[];
-  saving: boolean;
-  saveMessage: string;
-  saveError: string;
-  onChange: (field: keyof FormState, value: string) => void;
+  form: FormState
+  references: ReferenceForm[]
+  saving: boolean
+  saveMessage: string
+  saveError: string
+  onChange: (field: keyof FormState, value: string) => void
   onReferenceChange: (
     index: number,
     field: keyof ReferenceForm,
     value: string,
-  ) => void;
+  ) => void
   onPhotoSelection: (
     field: 'foto_vivienda' | 'foto_recibo_luz',
     file: File | null,
-  ) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  ) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  municipalities: string[] // tipo
 }) {
   return (
     <div className="w-100 d-flex flex-column">
@@ -646,7 +801,7 @@ function VistaNuevoAcreedor({
             className="text-white fw-bold mb-1"
             style={{ letterSpacing: '0.5px' }}
           >
-            Registro de Nuevo Acreedor
+            Registro de Nuevo Cliente
           </h4>
           <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
             Los campos marcados con (*) son obligatorios.
@@ -757,21 +912,6 @@ function VistaNuevoAcreedor({
             </div>
           </div>
 
-          <div className="col-md-6">
-            <label className="form-label text-white-50 small mb-2">
-              Teléfono Trabajo
-            </label>
-            <div className="inset-input-box">
-              <input
-                type="tel"
-                value={form.telefono_trabajo}
-                onChange={(e) => onChange('telefono_trabajo', e.target.value)}
-                placeholder="Ej. 5555-5555"
-              />
-            </div>
-          </div>
-        </div>
-
         <h6 className="form-section-title mb-4">
           <span className="text-gold me-2">02.</span> Ubicación Domiciliar
         </h6>
@@ -808,9 +948,19 @@ function VistaNuevoAcreedor({
                 required
               >
                 <option value="">Seleccione...</option>
-                <option value="Totonicapan">Totonicapán (Cabecera)</option>
-                <option value="San Cristobal">San Cristóbal Totonicapán</option>
-                <option value="San Francisco">San Francisco El Alto</option>
+                {municipalities.length > 0 ? (
+                  municipalities.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Totonicapán (Cabecera)">Totonicapán (Cabecera)</option>
+                    <option value="San Cristóbal Totonicapán">San Cristóbal Totonicapán</option>
+                    <option value="San Francisco El Alto">San Francisco El Alto</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -893,6 +1043,21 @@ function VistaNuevoAcreedor({
             </div>
           </div>
 
+          <div className="col-md-6">
+            <label className="form-label text-white-50 small mb-2">
+              Teléfono Trabajo
+            </label>
+            <div className="inset-input-box">
+              <input
+                type="tel"
+                value={form.telefono_trabajo}
+                onChange={(e) => onChange('telefono_trabajo', e.target.value)}
+                placeholder="Ej. 5555-5555"
+              />
+            </div>
+          </div>
+        </div>
+
           <div className="col-12">
             <label className="form-label text-white-50 small mb-2">
               Dirección del Lugar de Trabajo
@@ -916,6 +1081,7 @@ function VistaNuevoAcreedor({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 className="flex-fill"
                 value={form.ingresos_mensuales}
                 onChange={(e) => onChange('ingresos_mensuales', e.target.value)}
@@ -934,6 +1100,7 @@ function VistaNuevoAcreedor({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 className="flex-fill"
                 value={form.egreso_aproximado_mensual}
                 onChange={(e) =>
@@ -1001,7 +1168,12 @@ function VistaNuevoAcreedor({
                 Seleccionar Imagen
               </label>
               {form.foto_vivienda ? (
-                <small className="text-white-50 mt-3">{form.foto_vivienda}</small>
+                <small
+                  className="text-white-50 mt-3 file-name"
+                  title={form.foto_vivienda}
+                >
+                  {form.foto_vivienda}
+                </small>
               ) : null}
             </div>
           </div>
@@ -1040,7 +1212,10 @@ function VistaNuevoAcreedor({
                 Seleccionar Imagen
               </label>
               {form.foto_recibo_luz ? (
-                <small className="text-white-50 mt-3">
+                <small
+                  className="text-white-50 mt-3 file-name"
+                  title={form.foto_recibo_luz}
+                >
                   {form.foto_recibo_luz}
                 </small>
               ) : null}
@@ -1172,15 +1347,15 @@ function VistaNuevoAcreedor({
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
               <polyline points="7 3 7 8 15 8"></polyline>
             </svg>
-            {saving ? 'GUARDANDO...' : 'REGISTRAR ACREEDOR'}
+            {saving ? 'GUARDANDO...' : 'REGISTRAR CLIENTE'}
           </button>
         </div>
       </form>
     </div>
-  );
+  )
 }
 
-function VistaBuscarAcreedor({
+function VistaBuscarCliente({
   query,
   onQueryChange,
   onSearch,
@@ -1188,12 +1363,12 @@ function VistaBuscarAcreedor({
   error,
   results,
 }: {
-  query: string;
-  onQueryChange: (value: string) => void;
-  onSearch: () => void;
-  searching: boolean;
-  error: string;
-  results: SearchResult[];
+  query: string
+  onQueryChange: (value: string) => void
+  onSearch: () => void
+  searching: boolean
+  error: string
+  results: SearchResult[]
 }) {
   return (
     <>
@@ -1218,10 +1393,10 @@ function VistaBuscarAcreedor({
             className="text-white fw-bold mb-1"
             style={{ letterSpacing: '0.5px' }}
           >
-            Búsqueda de Acreedores
+            Búsqueda de Clientes
           </h4>
           <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
-            Busca por DPI, Nombre, Apellido, NIT o Número de Teléfono.
+            Busca por DPI, nombre, apellido, NIT o número de teléfono.
           </span>
         </div>
       </div>
@@ -1287,7 +1462,7 @@ function VistaBuscarAcreedor({
         )}
       </div>
     </>
-  );
+  )
 }
 
 function VistaListaNegra({
@@ -1309,23 +1484,23 @@ function VistaListaNegra({
   actionLoading,
   actionMessage,
 }: {
-  canViewFullList: boolean;
-  canValidateOnly: boolean;
-  canAssign: boolean;
-  blacklistQuery: string;
-  setBlacklistQuery: (value: string) => void;
-  onLoadBlacklist: () => void;
-  blacklistLoading: boolean;
-  blacklistError: string;
-  blacklistItems: BlacklistItem[];
-  candidateQuery: string;
-  setCandidateQuery: (value: string) => void;
-  onSearchCandidates: () => void;
-  candidateLoading: boolean;
-  candidates: SearchResult[];
-  onAddToBlacklist: (acreedorId: number) => void;
-  actionLoading: number | null;
-  actionMessage: string;
+  canViewFullList: boolean
+  canValidateOnly: boolean
+  canAssign: boolean
+  blacklistQuery: string
+  setBlacklistQuery: (value: string) => void
+  onLoadBlacklist: () => void
+  blacklistLoading: boolean
+  blacklistError: string
+  blacklistItems: BlacklistItem[]
+  candidateQuery: string
+  setCandidateQuery: (value: string) => void
+  onSearchCandidates: () => void
+  candidateLoading: boolean
+  candidates: SearchResult[]
+  onAddToBlacklist: (clienteId: number) => void
+  actionLoading: number | null
+  actionMessage: string
 }) {
   return (
     <>
@@ -1361,7 +1536,7 @@ function VistaListaNegra({
           </h4>
           <span className="text-white-50" style={{ fontSize: '0.85rem' }}>
             {canViewFullList
-              ? 'Acreedores restringidos por incumplimiento o fraude.'
+              ? 'Clientes restringidos por incumplimiento o fraude.'
               : 'Solo puedes validar si una persona aparece restringida, sin consultar el listado completo.'}
           </span>
         </div>
@@ -1425,13 +1600,13 @@ function VistaListaNegra({
           {canAssign && (
             <div className="inner-dark-box p-4">
               <h5 className="text-white mb-3">
-                Agregar acreedor a lista negra
+                Agregar cliente a lista negra
               </h5>
 
               <div className="inset-input-box mb-3">
                 <input
                   type="text"
-                  placeholder="Buscar acreedor por DPI o nombre..."
+                  placeholder="Buscar cliente por DPI o nombre..."
                   value={candidateQuery}
                   onChange={(e) => setCandidateQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && onSearchCandidates()}
@@ -1450,7 +1625,7 @@ function VistaListaNegra({
               <div className="d-flex flex-column gap-3">
                 {candidates.length === 0 ? (
                   <p className="text-white-50 mb-0">
-                    No hay acreedores para mostrar.
+                    No hay clientes para mostrar.
                   </p>
                 ) : (
                   candidates.map((item) => (
@@ -1497,7 +1672,7 @@ function VistaListaNegra({
           <div className="inset-input-box mb-3">
             <input
               type="text"
-              placeholder="Buscar por DPI o nombre del acreedor..."
+              placeholder="Buscar por DPI o nombre del cliente..."
               value={blacklistQuery}
               onChange={(e) => setBlacklistQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onLoadBlacklist()}
@@ -1517,7 +1692,7 @@ function VistaListaNegra({
             {blacklistItems.length === 0 ? (
               <p className="text-white-50 mb-0">
                 Esta vista no expone el catálogo completo; solo confirma si el
-                acreedor está restringido.
+                cliente está restringido.
               </p>
             ) : (
               blacklistItems.map((item) => (
@@ -1533,7 +1708,7 @@ function VistaListaNegra({
         </div>
       )}
     </>
-  );
+  )
 }
 
-export default CreditorsPage;
+export default CreditorsPage

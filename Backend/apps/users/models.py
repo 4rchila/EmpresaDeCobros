@@ -29,73 +29,43 @@ class Permission(models.Model):
         return self.code
 
 
-class Empleado(models.Model):
-    id = models.BigAutoField(primary_key=True, db_column="id_empleado")
-    nombres = models.CharField(max_length=100, db_column="nombres")
-    apellidos = models.CharField(max_length=100, db_column="apellidos")
-    telefono = models.CharField(max_length=20, null=True, blank=True, db_column="telefono")
-    direccion = models.TextField(null=True, blank=True, db_column="direccion")
-    puesto = models.CharField(max_length=100, db_column="puesto")
-    sueldo = models.DecimalField(max_digits=12, decimal_places=2, db_column="sueldo")
-    fecha_contratacion = models.DateField(null=True, blank=True, db_column="fecha_contratacion")
-    estado_laboral = models.CharField(max_length=30, db_column="estado_laboral")
-
-    class Meta:
-        db_table = "empleados"
-        managed = False
-        ordering = ["nombres", "apellidos"]
-
-    def __str__(self):
-        return self.nombre_completo
-
-    @property
-    def nombre_completo(self) -> str:
-        return f"{self.nombres} {self.apellidos}".strip()
-
-
 class Usuario(models.Model):
     id = models.BigAutoField(primary_key=True, db_column="id_usuario")
-    empleado = models.OneToOneField(
-        Empleado,
-        on_delete=models.DO_NOTHING,
-        db_column="id_empleado",
-        related_name="usuario",
-    )
     role = models.ForeignKey(
         Role,
         on_delete=models.DO_NOTHING,
         db_column="id_rol",
         related_name="usuarios",
     )
+    username = models.CharField(max_length=50, unique=True, db_column="username")
     email = models.CharField(max_length=150, unique=True, db_column="email")
     password_hash = models.TextField(db_column="password_hash")
+    nombres = models.CharField(max_length=100, db_column="nombres")
+    apellidos = models.CharField(max_length=100, db_column="apellidos")
+    telefono = models.CharField(max_length=20, null=True, blank=True, db_column="telefono")
+    direccion = models.TextField(null=True, blank=True, db_column="direccion")
+    ruta_foto_perfil = models.TextField(null=True, blank=True, db_column="ruta_foto_perfil")
     estado = models.CharField(max_length=30, db_column="estado")
     fecha_creacion = models.DateTimeField(db_column="fecha_creacion")
 
     class Meta:
         db_table = "usuarios"
         managed = False
-        ordering = ["email"]
+        ordering = ["username"]
 
     def __str__(self):
-        return self.email
-
-    @property
-    def username(self) -> str:
-        return self.email
+        return self.username
 
     @property
     def first_name(self) -> str:
-        return self.empleado.nombres if self.empleado_id else ""
+        return self.nombres or ""
 
     @property
     def last_name(self) -> str:
-        return self.empleado.apellidos if self.empleado_id else ""
+        return self.apellidos or ""
 
     def get_full_name(self) -> str:
-        if self.empleado_id:
-            return self.empleado.nombre_completo
-        return self.email
+        return f"{self.nombres} {self.apellidos}".strip()
 
     @property
     def full_name(self) -> str:
@@ -127,7 +97,10 @@ class Usuario(models.Model):
 
     def get_permission_codes(self) -> list[str]:
         return list(
-            self.role.role_permissions.select_related("permission").values_list("permission__code", flat=True)
+            self.role.role_permissions.select_related("permission").values_list(
+                "permission__code",
+                flat=True,
+            )
         )
 
 
@@ -153,3 +126,35 @@ class RolePermission(models.Model):
 
     def __str__(self):
         return f"{self.role} -> {self.permission}"
+
+
+class RegistroCreacionUsuario(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column="id_registro")
+    admin = models.ForeignKey(
+        Usuario,
+        on_delete=models.DO_NOTHING,
+        db_column="id_admin",
+        related_name="registros_como_admin",
+    )
+    usuario_creado = models.ForeignKey(
+        Usuario,
+        on_delete=models.DO_NOTHING,
+        db_column="id_usuario_creado",
+        related_name="registros_como_creado",
+    )
+    username_usuario = models.CharField(max_length=50, db_column="username_usuario")
+    nombre_usuario = models.CharField(max_length=200, db_column="nombre_usuario")
+    email_usuario = models.CharField(max_length=150, db_column="email_usuario")
+    rol_asignado = models.CharField(max_length=50, db_column="rol_asignado")
+    fecha_creacion = models.DateField(db_column="fecha_creacion")
+    hora_creacion = models.TimeField(db_column="hora_creacion")
+    estado_creacion = models.CharField(max_length=30, db_column="estado_creacion")
+    observaciones = models.TextField(null=True, blank=True, db_column="observaciones")
+
+    class Meta:
+        db_table = "registro_creacion_usuario"
+        managed = False
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"{self.username_usuario} ({self.rol_asignado})"

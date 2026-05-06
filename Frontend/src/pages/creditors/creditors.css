@@ -115,6 +115,21 @@
   box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.18);
 }
 
+.inset-upload-box .file-name {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+/* Opcional: ajustar tamaño de fuente para nombres muy largos */
+.inset-upload-box .file-name {
+  font-size: 0.85rem;
+}
+
 .reference-box {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);

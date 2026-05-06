@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "cambia-esta-clave-en-env")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,0.0.0.0").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.users",
     "apps.clientes",
+    "apps.prestamos",
 ]
 
 MIDDLEWARE = [
@@ -55,7 +56,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-if os.getenv("USE_POSTGRES") == "True":
+if os.getenv("USE_POSTGRES", "True") == "True":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -65,7 +66,7 @@ if os.getenv("USE_POSTGRES") == "True":
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
             "OPTIONS": {
-                "sslmode": "require",
+                "sslmode": os.getenv("DB_SSLMODE", "require"),
             },
         }
     }
@@ -110,3 +111,5 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ),
 }
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
