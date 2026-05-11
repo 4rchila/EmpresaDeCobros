@@ -1,0 +1,647 @@
+/* ================= LOG - BITÁCORA DEL SISTEMA ================= */
+
+.log-container {
+    background-color: #0b1421;
+    font-family: 'Poppins', sans-serif;
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+}
+
+.log-container::before {
+    content: '';
+    position: fixed;
+    width: 1200px;
+    height: 1200px;
+    background: radial-gradient(circle, #2c4b75 0%, transparent 60%);
+    top: 50%;
+    left: -400px;
+    transform: translateY(-50%);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.log-container::after {
+    content: '';
+    position: fixed;
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(circle, #cca641 0%, transparent 60%);
+    top: -300px;
+    right: -250px;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ================= HEADER ================= */
+.log-header {
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    backdrop-filter: blur(12px);
+    border-radius: 0 0 24px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.log-badge-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(204, 166, 65, 0.12);
+    border: 1px solid rgba(204, 166, 65, 0.25);
+    color: #cca641;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.log-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.log-subtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 500;
+    margin: 0;
+}
+
+.log-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.log-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* ================= KPI ROW ================= */
+.log-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.log-kpi-card {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.log-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.log-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.log-kpi-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0 0 2px;
+}
+
+.log-kpi-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+/* ================= SEARCH BOX ================= */
+.log-search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.3);
+    padding: 12px 16px;
+    transition: all 0.3s ease;
+}
+
+.log-search-box:focus-within {
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid rgba(204, 166, 65, 0.5);
+    box-shadow: inset 3px 3px 10px rgba(0, 0, 0, 0.4), 0 0 10px rgba(204, 166, 65, 0.15);
+}
+
+.log-search-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    width: 100%;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.log-search-box input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* ================= FILTER BUTTON ================= */
+.log-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.log-filter-btn:hover {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.log-filter-btn-active {
+    background: rgba(204, 166, 65, 0.1);
+    border-color: rgba(204, 166, 65, 0.3);
+    color: #cca641;
+}
+
+.log-filter-count {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #cca641, #f6e073);
+    color: #1a2332;
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ================= FILTERS PANEL ================= */
+.log-filters-panel {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 14px;
+    padding: 18px 20px;
+    border-top: 1px solid rgba(0, 0, 0, 0.4);
+    border-left: 1px solid rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.2);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.log-filters-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0;
+}
+
+.log-clear-btn {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 8px;
+    color: #f87171;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.log-clear-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Category chips */
+.log-cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.log-cat-chip:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.log-cat-chip-active {
+    border-width: 1.5px;
+}
+
+.log-cat-chip svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ================= DATE HEADER ================= */
+.log-date-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.log-date-count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.2);
+    padding: 3px 12px;
+    border-radius: 20px;
+}
+
+/* ================= TIMELINE ================= */
+.log-timeline {
+    position: relative;
+    padding-left: 44px;
+}
+
+.log-entry-wrapper {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.log-timeline-dot {
+    position: absolute;
+    left: -44px;
+    top: 18px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1.5px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.log-timeline-dot svg {
+    width: 14px;
+    height: 14px;
+}
+
+.log-timeline-connector {
+    position: absolute;
+    left: -29px;
+    top: 52px;
+    bottom: -12px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+.log-entry-wrapper:last-child .log-timeline-connector {
+    display: none;
+}
+
+/* ================= LOG ENTRY CARD ================= */
+.log-entry-card {
+    background: linear-gradient(135deg, #071521, #0b1f33, #06121c);
+    border-radius: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 6px 8px 20px rgba(0, 0, 0, 0.3), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.log-entry-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 6px 10px 25px rgba(0, 0, 0, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.05);
+}
+
+.log-entry-expanded {
+    border-color: rgba(204, 166, 65, 0.2) !important;
+    box-shadow: 0 10px 40px rgba(204, 166, 65, 0.08), 6px 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Header clickable */
+.log-entry-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+}
+
+.log-entry-cat-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.log-entry-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.log-entry-desc {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 3px 0 0;
+    line-height: 1.4;
+}
+
+.log-entry-monto {
+    font-size: 16px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.log-entry-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.3);
+    white-space: nowrap;
+}
+
+.log-entry-time svg {
+    width: 12px;
+    height: 12px;
+}
+
+.log-entry-chevron {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.log-chevron-active {
+    background: rgba(204, 166, 65, 0.12);
+    border-color: rgba(204, 166, 65, 0.3);
+    color: #cca641;
+}
+
+/* ================= DETAIL PANEL ================= */
+.log-entry-detail {
+    padding: 0 18px 18px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.log-detail-separator {
+    height: 1px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 16px;
+}
+
+.log-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.log-detail-item {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    border-left: 1px solid rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    border-right: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.log-detail-key {
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0 0 3px;
+}
+
+.log-detail-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+}
+
+/* ================= SHOW MORE BUTTON ================= */
+.log-show-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: 2px dashed rgba(204, 166, 65, 0.25);
+    background: transparent;
+    color: #cca641;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.log-show-more-btn:hover {
+    background: rgba(204, 166, 65, 0.08);
+    border-color: rgba(204, 166, 65, 0.5);
+    transform: translateY(-1px);
+}
+
+/* ================= EMPTY STATE ================= */
+.log-empty-state {
+    text-align: center;
+    padding: 50px 30px;
+    background: linear-gradient(135deg, #071521, #0b1f33);
+    border-radius: 16px;
+    border: 2px dashed rgba(255, 255, 255, 0.06);
+}
+
+.log-empty-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.2);
+    margin: 0 auto 16px;
+}
+
+.log-empty-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0 0 6px;
+}
+
+.log-empty-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 500;
+    margin: 0;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1200px) {
+    .log-kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .log-title {
+        font-size: 1.3rem;
+    }
+
+    .log-kpi-row {
+        grid-template-columns: 1fr;
+    }
+
+    .log-entry-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .log-entry-monto {
+        font-size: 14px;
+    }
+
+    .log-timeline {
+        padding-left: 36px;
+    }
+
+    .log-timeline-dot {
+        left: -36px;
+        width: 26px;
+        height: 26px;
+    }
+
+    .log-timeline-dot svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    .log-timeline-connector {
+        left: -24px;
+    }
+
+    .log-detail-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .log-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .log-entry-cat-badge {
+        font-size: 9px;
+        padding: 3px 8px;
+    }
+}

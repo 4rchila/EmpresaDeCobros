@@ -8,6 +8,8 @@ import UserProfile from './pages/user/userProfile'
 import PortafolioPage from './pages/user/portafolioPage'
 import PaymentsPage from './pages/payment/payments'
 import VaultPage from './pages/vault/vault'
+import ReportsPage from './pages/report/reports'
+import LogsPage from './pages/Log/logs'
 
 function App() {
   return (
@@ -22,6 +24,8 @@ function App() {
         <Route path="/PortafolioPage" element={<PortafolioPage />} />
         <Route path="/PaymentsPage" element={<PaymentsPage />} />
         <Route path="/VaultPage" element={<VaultPage />} />
+        <Route path="/ReportsPage" element={<ReportsPage />} />
+        <Route path="/LogsPage" element={<LogsPage />} />
       </Routes>
     </BrowserRouter>
   )
