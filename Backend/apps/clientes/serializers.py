@@ -20,6 +20,63 @@ from .models import (
 )
 
 
+class ClientePhotoUploadSerializer(serializers.Serializer):
+    archivo = serializers.FileField(required=True)
+    descripcion = serializers.CharField(required=False, allow_blank=True)
+
+    def save(self, **kwargs):
+        from config.storage_backends import ClientesStorage
+        storage = ClientesStorage()
+        archivo = self.validated_data["archivo"]
+        # Usar timestamp para evitar colisiones de nombres
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        name = f"{timestamp}_{archivo.name}"
+        filename = storage.save(name, archivo)
+        ruta_archivo = storage.url(filename)
+        return {
+            "ruta_archivo": ruta_archivo,
+            "descripcion": (self.validated_data.get("descripcion") or "").strip() or None,
+        }
+
+
+class ClienteUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cliente
+        fields = [
+            "nombres",
+            "apellidos",
+            "dpi",
+            "nit",
+            "direccion",
+            "municipio",
+            "distrito",
+            "departamento",
+            "fecha_nacimiento",
+            "ingresos_mensuales",
+            "egreso_aproximado_mensual",
+            "estado_cliente",
+        ]
+
+    def validate_dpi(self, value):
+        value = re.sub(r"\D", "", value or "")
+        if len(value) != 13:
+            raise serializers.ValidationError("El DPI debe contener exactamente 13 dígitos.")
+        
+        # Validar unicidad excluyendo al cliente actual
+        if Cliente.objects.filter(dpi=value).exclude(pk=self.instance.pk).exists():
+            raise serializers.ValidationError("Ya existe un cliente con ese DPI.")
+        return value
+
+    def validate_nit(self, value):
+        if not value or not value.strip():
+            return None
+        cleaned = re.sub(r"\s+", "", value)
+        if not re.fullmatch(r"[A-Za-z0-9]{1,13}", cleaned):
+             raise serializers.ValidationError("El NIT debe ser alfanumérico.")
+        return cleaned
+
+
+
 class ReferenciaInputSerializer(serializers.Serializer):
     nombres = serializers.CharField(max_length=150)
     apellidos = serializers.CharField(max_length=150, required=False, allow_blank=True)
@@ -617,11 +674,15 @@ class PortafolioClienteSerializer(serializers.ModelSerializer):
         return telefono.numero if telefono else None
 
     def get_loans(self, obj: Cliente):
-        prestamos = (
-            obj.prestamos.select_related("plan")
-            .prefetch_related("garantias", "garantias__fotos", "garantias__evaluaciones")
-            .all()
-        )
+        # Usamos los préstamos ya precargados si existen para evitar N+1
+        prestamos = getattr(obj, 'prestamos', None)
+        if prestamos is None:
+            prestamos = (
+                obj.prestamos.select_related("plan")
+                .prefetch_related("garantias", "garantias__fotos", "garantias__evaluaciones")
+                .all()
+            )
+        
         return PortafolioLoanListSerializer(
             prestamos,
             many=True,
@@ -699,7 +760,29 @@ class MoverClienteCarteraSerializer(serializers.Serializer):
         return value
 
     def save(self, **kwargs):
-        cliente = Cliente.objects.get(pk=self.validated_data["cliente_id"])
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user:
+            raise serializers.ValidationError("Usuario no autenticado.")
+
+        cliente = Cliente.objects.filter(pk=self.validated_data["cliente_id"]).first()
+        if not cliente:
+            raise serializers.ValidationError("El cliente no existe.")
+
+        # Verificar permisos: Administradores pueden todo, asesores solo lo suyo
+        from apps.clientes.views import get_role_name
+        role_name = get_role_name(user)
+        is_admin = role_name in {"administrador", "admin", "gerente"}
+
+        if not is_admin and cliente.asesor_id != user.id:
+            raise serializers.ValidationError("No tienes permiso para mover un cliente que no te pertenece.")
+
+        cartera_destino = Cartera.objects.filter(pk=self.validated_data["cartera_destino_id"]).first()
+        if not cartera_destino:
+            raise serializers.ValidationError("La cartera destino no existe.")
+
+        if not is_admin and cartera_destino.usuario_responsable_id != user.id:
+            raise serializers.ValidationError("No tienes permiso para mover clientes a una cartera que no gestionas.")
 
         if cliente.estado_cliente != "activo":
             raise serializers.ValidationError("No puedes mover un cliente que aún no fue aprobado.")
@@ -707,6 +790,6 @@ class MoverClienteCarteraSerializer(serializers.Serializer):
         if not cliente.prestamos.exists():
             raise serializers.ValidationError("No puedes mover un cliente sin préstamos.")
 
-        cliente.cartera_id = self.validated_data["cartera_destino_id"]
+        cliente.cartera_id = cartera_destino.id
         cliente.save(update_fields=["cartera_id"])
         return cliente

@@ -2,7 +2,6 @@
   background-color: #0b1421;
   font-family: 'Poppins', sans-serif;
   position: relative;
-  z-index: 1;
   min-height: 100vh;
 }
 
@@ -40,7 +39,8 @@
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 4px 0 20px rgba(0,0,0,0.2);
   width: 270px;
-  z-index: 10;
+  position: relative;
+  z-index: 10; /* Menor que el panel principal */
   height: 100vh;
   flex-shrink: 0;
 }
@@ -105,6 +105,8 @@
   min-width: 0;
   min-height: 0;
   height: 100vh;
+  position: relative;
+  z-index: 20; /* Mayor que el sidebar */
 }
 
 /* ================= NAVBAR ================= */
@@ -115,7 +117,7 @@
   backdrop-filter: blur(10px);
   flex-shrink: 0;
   position: relative;
-  z-index: 5000;
+  z-index: 100;
 }
 
 .input-custom {
@@ -434,7 +436,7 @@
     height: 100vh;
     width: 270px;
     transition: left 0.3s ease;
-    z-index: 1800;
+    z-index: 9000;
   }
 
   .sidebar.mobile-sidebar-open {
@@ -442,8 +444,18 @@
   }
 
   .top-navbar {
-    padding-left: 60px !important;
-    z-index: 5000;
+    padding-left: 65px !important;
+    padding-right: 15px !important;
+    height: 60px;
+  }
+
+  .input-custom {
+    display: none; /* Hide main search on mobile to save space, or make it a button */
+  }
+
+  .main-panel {
+    height: 100vh;
+    padding-top: 60px; /* Space for fixed/sticky navbar if needed */
   }
 
   .content-area {
@@ -455,33 +467,34 @@
     display: none;
   }
 
-  .extruded-card,
-  .extruded-form-card {
+  .extruded-card {
     border-radius: 12px;
+    padding: 1.25rem !important;
   }
 
-  .tabs-container {
-    flex-wrap: wrap;
+  .amount-display span {
+    font-size: 1.6rem !important;
   }
 
-  .main-panel {
-    height: 100vh;
+  .btn-gold-action {
+    width: 100%;
+    padding: 12px;
   }
 
   .notifications-dropdown,
   .glass-dropdown.dropdown-menu {
-    top: 60px;
-    right: 12px;
-    width: min(92vw, 340px);
-    max-height: 70vh;
+    top: 55px;
+    right: 10px;
+    width: calc(100vw - 20px);
+    max-height: 75vh;
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .notifications-dropdown,
   .glass-dropdown.dropdown-menu {
     right: 8px;
-    width: calc(100vw - 24px);
+    width: calc(100vw - 16px);
     padding: 10px;
   }
 
@@ -489,5 +502,13 @@
   .glass-dropdown .dropdown-item {
     padding: 10px 12px;
     font-size: 13px;
+  }
+
+  .rpt-kpi-value, .log-kpi-value {
+    font-size: 1.1rem !important;
+  }
+
+  .rpt-title, .log-title {
+    font-size: 1.1rem !important;
   }
 }

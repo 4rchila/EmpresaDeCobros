@@ -236,6 +236,7 @@ function PortafolioPage({ user }: PortafolioPageProps) {
   const [savingEditId, setSavingEditId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [movingClientId, setMovingClientId] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   const roleLower = user?.role?.trim().toLowerCase() ?? ''
   const portfolioEnabledRoles = ['administrador', 'admin', 'gerente', 'secretaria', 'asesor']
@@ -456,6 +457,37 @@ function PortafolioPage({ user }: PortafolioPageProps) {
   const handleOpenLoan = (loan: Loan) => {
     setSelectedLoan(loan)
     setShowGarantias(false)
+  }
+
+  const handleDownloadDocument = async (loanId: string, docType: 'pagare' | 'contrato', format: 'docx' | 'pdf') => {
+    setMessage('')
+    setError('')
+    const downloadKey = `${docType}-${format}`
+    setDownloading(downloadKey)
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/loans/${loanId}/documento/${docType}/?format=${format}`,
+        {
+          headers: authHeaders(),
+          responseType: 'blob',
+        }
+      )
+
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `${docType}_${loanId}.${format}`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setMessage('Documento descargado con éxito.')
+    } catch (error) {
+      setError(getErrorDetail(error, 'No se pudo descargar el documento.'))
+    } finally {
+      setDownloading(null)
+    }
   }
 
   return (
@@ -805,6 +837,50 @@ function PortafolioPage({ user }: PortafolioPageProps) {
                   <span>Monto Total</span>
                 </div>
                 <span className="loan-monto-total-value">{selectedLoan.montoTotal}</span>
+              </div>
+
+              <div className="loan-document-section mt-4">
+                <h4 className="text-gold small mb-3" style={{ opacity: 0.8, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  Documentos Legales
+                </h4>
+                <div className="d-flex flex-wrap gap-2">
+                  <button 
+                    className="btn-modern-dark py-2 px-3 d-flex align-items-center gap-2"
+                    onClick={() => void handleDownloadDocument(selectedLoan.id, 'pagare', 'docx')}
+                    disabled={downloading !== null}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Pagaré (Word)
+                  </button>
+                  <button 
+                    className="btn-modern-dark py-2 px-3 d-flex align-items-center gap-2"
+                    onClick={() => void handleDownloadDocument(selectedLoan.id, 'pagare', 'pdf')}
+                    disabled={downloading !== null}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Pagaré (PDF)
+                  </button>
+                  <button 
+                    className="btn-modern-dark py-2 px-3 d-flex align-items-center gap-2"
+                    onClick={() => void handleDownloadDocument(selectedLoan.id, 'contrato', 'docx')}
+                    disabled={downloading !== null}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Contrato (Word)
+                  </button>
+                  <button 
+                    className="btn-modern-dark py-2 px-3 d-flex align-items-center gap-2"
+                    onClick={() => void handleDownloadDocument(selectedLoan.id, 'contrato', 'pdf')}
+                    disabled={downloading !== null}
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Contrato (PDF)
+                  </button>
+                </div>
               </div>
 
               <div className="loan-garantia-section">

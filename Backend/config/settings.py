@@ -21,15 +21,20 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "storages",
     "apps.users",
     "apps.clientes",
     "apps.prestamos",
+    "apps.pagos",
+    "apps.bitacora",
+    "apps.reportes",
+    "apps.notificaciones",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -46,6 +51,7 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -63,8 +69,8 @@ if os.getenv("USE_POSTGRES", "True") == "True":
             "NAME": os.getenv("DB_NAME", "postgres"),
             "USER": os.getenv("DB_USER", "postgres"),
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
-            "HOST": os.getenv("DB_HOST", "localhost"),
-            "PORT": os.getenv("DB_PORT", "5432"),
+            "HOST": os.getenv("DB_HOST", "aws-1-us-west-2.pooler.supabase.com"),
+            "PORT": os.getenv("DB_PORT", "6543"),
             "OPTIONS": {
                 "sslmode": os.getenv("DB_SSLMODE", "require"),
             },
@@ -110,6 +116,35 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
     ),
+    "UNAUTHENTICATED_USER": None,
+    "UNAUTHENTICATED_TOKEN": None,
 }
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Supabase Storage (S3) configuration
+SUPABASE_S3_ACCESS_KEY_ID = os.getenv("SUPABASE_S3_ACCESS_KEY_ID")
+SUPABASE_S3_SECRET_ACCESS_KEY = os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY")
+SUPABASE_S3_STORAGE_BUCKET_NAME = os.getenv("SUPABASE_S3_BUCKET")
+SUPABASE_S3_REGION_NAME = os.getenv("SUPABASE_S3_REGION", "us-west-2")
+SUPABASE_S3_ENDPOINT_URL = os.getenv("SUPABASE_S3_ENDPOINT")
+
+if SUPABASE_S3_ACCESS_KEY_ID and SUPABASE_S3_SECRET_ACCESS_KEY:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "access_key": SUPABASE_S3_ACCESS_KEY_ID,
+                "secret_key": SUPABASE_S3_SECRET_ACCESS_KEY,
+                "bucket_name": SUPABASE_S3_STORAGE_BUCKET_NAME,
+                "region_name": SUPABASE_S3_REGION_NAME,
+                "endpoint_url": SUPABASE_S3_ENDPOINT_URL,
+                "default_acl": "public-read",
+                "querystring_auth": False,
+                "file_overwrite": False,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

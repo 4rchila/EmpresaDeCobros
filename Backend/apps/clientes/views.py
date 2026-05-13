@@ -1,15 +1,21 @@
+from django.conf import settings
 from django.db.models import Prefetch, Q
 from rest_framework import permissions, status
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils import timezone
 from apps.prestamos.models import Prestamo
+from apps.notificaciones.models import Notificacion
+from apps.bitacora.utils import registrar_en_bitacora
 from .models import Cartera, Cliente, InformeNuevoCliente, ListaNegraCliente
 from .serializers import (
     CarteraCreateSerializer,
     CarteraUpdateSerializer,
     ClienteCreateSerializer,
+    ClienteUpdateSerializer,
     ClienteDetailSerializer,
+    ClientePhotoUploadSerializer,
     ClienteListSerializer,
     InformeNuevoClienteDetailSerializer,
     InformeNuevoClienteListSerializer,
@@ -19,6 +25,8 @@ from .serializers import (
     PortafolioCarteraSerializer,
     PortafolioClienteSerializer,
 )
+
+
 
 ADMIN_ROLES = {"administrador", "admin", "gerente"}
 
@@ -49,6 +57,23 @@ def has_any_permission(user, *required_permissions: str) -> bool:
 
 def is_admin_user(user) -> bool:
     return get_role_name(user) in ADMIN_ROLES
+
+
+class ClientePhotoUploadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        if not has_any_permission(request.user, "crear_cliente"):
+            return Response(
+                {"detail": "No tienes permiso para subir fotos de clientes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = ClientePhotoUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.save()
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 def get_creditor_queryset_for_user(user):
@@ -117,6 +142,15 @@ class CreditorsCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         cliente = serializer.save()
 
+        # Log to Bitacora
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='cliente',
+            titulo=f'Nuevo cliente registrado - {cliente.nombre_completo}',
+            descripcion=f'Se registró al cliente {cliente.nombre_completo} con DPI {cliente.dpi}.',
+            detalles={'DPI': cliente.dpi, 'Teléfono': cliente.telefonos.first().numero if cliente.telefonos.exists() else 'N/A'}
+        )
+
         output = ClienteDetailSerializer(cliente)
         return Response(output.data, status=status.HTTP_201_CREATED)
 
@@ -182,6 +216,40 @@ class CreditorDetailView(APIView):
 
         serializer = ClienteDetailSerializer(cliente)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request, creditor_id: int):
+        if not has_any_permission(
+            request.user,
+            "crear_acreedor",
+            "crear_cliente",
+        ):
+            return Response(
+                {"detail": "No tienes permiso para editar clientes."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        cliente = Cliente.objects.filter(pk=creditor_id).first()
+        if not cliente:
+            return Response(
+                {"detail": "Cliente no encontrado."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ClienteUpdateSerializer(cliente, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        cliente = serializer.save()
+
+        # Log to Bitacora
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='cliente',
+            titulo=f'Cliente actualizado - {cliente.nombre_completo}',
+            descripcion=f'Se actualizaron los datos del cliente {cliente.nombre_completo}.',
+            detalles={'DPI': cliente.dpi}
+        )
+
+        output = ClienteDetailSerializer(cliente, context={"request": request})
+        return Response(output.data, status=status.HTTP_200_OK)
 
 
 class PendingPrequalificationListView(APIView):
@@ -348,71 +416,101 @@ class BlacklistView(APIView):
 
 class PortfolioBoardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
     def get(self, request):
-        if not has_any_permission(
-            request.user,
-            "crear_cartera",
-            "editar_cartera",
-            "ver_cartera",
-            "asignar_acreedor_cartera",
-        ):
-            return Response(
-                {"detail": "No tienes permiso para ver las carteras."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        try:
+            # Permitimos a cualquier usuario autenticado ver sus propias carteras.
+            today = timezone.localdate()
 
-        client_queryset = get_portafolio_client_queryset_for_user(request.user)
-        carteras_queryset = Cartera.objects.filter(usuario_responsable=request.user).order_by("nombre_cartera")
-        carteras_data = PortafolioCarteraSerializer(
-            carteras_queryset,
-            many=True,
-            context={"request": request},
-        ).data
+            # 1. Asegurarnos de que exista una cartera "Vencida" para el usuario
+            # Usamos .filter().first() en lugar de get_or_create para evitar MultipleObjectsReturned
+            cartera_vencida = Cartera.objects.filter(
+                usuario_responsable=request.user,
+                estado='vencida'
+            ).first()
 
-        clientes_por_cartera = {}
-        for cliente in client_queryset:
-            cartera_key = cliente.cartera_id
-            serialized_cliente = PortafolioClienteSerializer(
-                cliente,
+            if not cartera_vencida:
+                try:
+                    cartera_vencida = Cartera.objects.create(
+                        usuario_responsable=request.user,
+                        nombre_cartera='Cartera Vencida',
+                        estado='vencida'
+                    )
+                except Exception as e:
+                    print(f"Error creando cartera vencida: {e}")
+                    # Si falla la creación, simplemente no movemos clientes hoy
+                    cartera_vencida = None
+
+            # 2. Identificar clientes del usuario con cuotas vencidas (saldo > 0 y fecha < hoy)
+            if cartera_vencida:
+                from apps.prestamos.models import Cuota
+                clientes_mora_ids = Cuota.objects.filter(
+                    prestamo__cliente__asesor=request.user,
+                    fecha_vencimiento__lt=today,
+                    saldo_cuota__gt=0,
+                    estado_cuota__in=['pendiente', 'parcial', 'vencida']
+                ).values_list('prestamo__cliente_id', flat=True).distinct()
+
+                # 3. Mover esos clientes a la cartera vencida si no están ya en una vencida/muerta
+                if clientes_mora_ids:
+                    Cliente.objects.filter(
+                        id__in=clientes_mora_ids
+                    ).exclude(
+                        cartera__estado__in=['vencida', 'muerta']
+                    ).update(cartera=cartera_vencida)
+
+            client_queryset = get_portafolio_client_queryset_for_user(request.user)
+            carteras_queryset = Cartera.objects.filter(usuario_responsable=request.user).order_by("nombre_cartera")
+            
+            carteras_data = PortafolioCarteraSerializer(
+                carteras_queryset,
+                many=True,
                 context={"request": request},
             ).data
 
-            if cartera_key is None:
-                clientes_por_cartera.setdefault("sin_cartera", []).append(serialized_cliente)
-            else:
-                clientes_por_cartera.setdefault(cartera_key, []).append(serialized_cliente)
+            clientes_por_cartera = {}
+            for cliente in client_queryset:
+                cartera_key = cliente.cartera_id
+                serialized_cliente = PortafolioClienteSerializer(
+                    cliente,
+                    context={"request": request},
+                ).data
 
-        result_carteras = []
-        for cartera in carteras_data:
-            result_carteras.append(
+                if cartera_key is None:
+                    clientes_por_cartera.setdefault("sin_cartera", []).append(serialized_cliente)
+                else:
+                    clientes_por_cartera.setdefault(cartera_key, []).append(serialized_cliente)
+
+            result_carteras = []
+            for cartera in carteras_data:
+                result_carteras.append(
+                    {
+                        **cartera,
+                        "clientes": clientes_por_cartera.get(cartera["id"], []),
+                    }
+                )
+
+            return Response(
                 {
-                    **cartera,
-                    "clientes": clientes_por_cartera.get(cartera["id"], []),
-                }
+                    "carteras": result_carteras,
+                    "sin_cartera": clientes_por_cartera.get("sin_cartera", []),
+                },
+                status=status.HTTP_200_OK,
             )
-
-        return Response(
-            {
-                "carteras": result_carteras,
-                "sin_cartera": clientes_por_cartera.get("sin_cartera", []),
-            },
-            status=status.HTTP_200_OK,
-        )
+        except Exception as e:
+            import traceback
+            print("!!! ERROR EN PORTFOLIO BOARD VIEW !!!")
+            print(traceback.format_exc())
+            return Response(
+                {"detail": f"Error interno al cargar el portafolio: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PortfolioCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        if not has_any_permission(
-            request.user,
-            "crear_cartera",
-        ):
-            return Response(
-                {"detail": "No tienes permiso para crear carteras."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Permitimos a cualquier usuario autenticado crear sus propias carteras.
 
         serializer = CarteraCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -426,15 +524,7 @@ class PortfolioDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, cartera_id: int):
-        if not has_any_permission(
-            request.user,
-            "editar_cartera",
-            "crear_cartera",
-        ):
-            return Response(
-                {"detail": "No tienes permiso para editar carteras."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Permitimos a cualquier usuario autenticado editar sus propias carteras.
 
         cartera = Cartera.objects.select_related("usuario_responsable").filter(pk=cartera_id).first()
 
@@ -458,15 +548,7 @@ class PortfolioDetailView(APIView):
         return Response(output.data, status=status.HTTP_200_OK)
 
     def delete(self, request, cartera_id: int):
-        if not has_any_permission(
-            request.user,
-            "editar_cartera",
-            "crear_cartera",
-        ):
-            return Response(
-                {"detail": "No tienes permiso para eliminar carteras."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Permitimos a cualquier usuario autenticado eliminar sus propias carteras.
 
         cartera = Cartera.objects.select_related("usuario_responsable").filter(pk=cartera_id).first()
 
@@ -496,20 +578,15 @@ class PortfolioDetailView(APIView):
         )
 
 
+
+
+
 class MoveClientPortfolioView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        if not has_any_permission(
-            request.user,
-            "asignar_acreedor_cartera",
-            "editar_cartera",
-            "crear_cartera",
-        ):
-            return Response(
-                {"detail": "No tienes permiso para mover clientes entre carteras."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Permitimos a cualquier usuario autenticado mover sus clientes entre carteras.
+        # El serializador ya valida que las carteras pertenezcan al usuario.
 
         serializer = MoverClienteCarteraSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
@@ -548,13 +625,49 @@ class PendingPrequalificationApproveView(APIView):
 
         cliente = informe.cliente
         cliente.estado_cliente = "activo"
-        cliente.save(update_fields=["estado_cliente"])
+        
+        # Asignar cartera principal del asesor si no tiene una
+        if cliente.asesor and not cliente.cartera:
+            cartera_principal = Cartera.objects.filter(
+                usuario_responsable=cliente.asesor,
+                nombre_cartera__iexact="Cartera Principal"
+            ).first()
+            
+            if not cartera_principal:
+                cartera_principal = Cartera.objects.create(
+                    usuario_responsable=cliente.asesor,
+                    nombre_cartera="Cartera Principal",
+                    estado="activa",
+                    fecha_inicio=timezone.localdate()
+                )
+            cliente.cartera = cartera_principal
+            cliente.save(update_fields=["estado_cliente", "cartera"])
+        else:
+            cliente.save(update_fields=["estado_cliente"])
 
         informe.estado_revision = "aprobado"
         informe.observaciones = (
             (informe.observaciones or "").strip() + "\nPrecalificación aprobada."
         ).strip()
         informe.save(update_fields=["estado_revision", "observaciones"])
+
+        # Notify the advisor
+        if cliente.asesor:
+            Notificacion.objects.create(
+                usuario_destino=cliente.asesor,
+                tipo='precalificacion',
+                titulo='Cliente Aprobado',
+                mensaje=f'La precalificación del cliente {cliente.nombre_completo} ha sido aprobada.',
+            )
+
+        # Log to Bitacora
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='sistema',
+            titulo=f'Precalificación aprobada - {cliente.nombre_completo}',
+            descripcion=f'Se aprobó la precalificación del cliente {cliente.nombre_completo}.',
+            detalles={'Cliente': cliente.nombre_completo, 'DPI': cliente.dpi}
+        )
 
         return Response(
             {

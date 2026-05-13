@@ -6,8 +6,10 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
+from django.conf import settings
 from apps.clientes.models import Cartera, Cliente
 from apps.users.models import Usuario
+from apps.pagos.models import Caja, IngresoCaja
 from .models import (
     Cuota,
     EvaluacionGarantia,
@@ -18,6 +20,25 @@ from .models import (
     PlanPago,
     Prestamo,
 )
+from apps.pagos.models import Caja, Desembolso, EgresoCaja
+
+
+class PrestamoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prestamo
+        fields = [
+            "monto_solicitado",
+            "interes",
+            "destino_uso",
+            "plan",
+        ]
+
+    def validate(self, data):
+        if self.instance.fecha_desembolso:
+            raise serializers.ValidationError("No se puede editar un préstamo ya desembolsado.")
+        return data
+
+
 
 
 class PlanPagoListSerializer(serializers.ModelSerializer):
@@ -54,9 +75,11 @@ class GarantiaPhotoUploadSerializer(serializers.Serializer):
     es_principal = serializers.BooleanField(required=False, default=False)
 
     def save(self, **kwargs):
+        from config.storage_backends import GarantiasStorage
+        storage = GarantiasStorage()
         archivo = self.validated_data["archivo"]
-        filename = default_storage.save(f"garantias/{archivo.name}", archivo)
-        ruta_archivo = default_storage.url(filename)
+        filename = storage.save(archivo.name, archivo)
+        ruta_archivo = storage.url(filename)
         return {
             "ruta_archivo": ruta_archivo,
             "descripcion": (self.validated_data.get("descripcion") or "").strip() or None,
@@ -78,18 +101,27 @@ class FotoGarantiaSerializer(serializers.ModelSerializer):
         ]
 
     def get_ruta_archivo(self, obj: FotoGarantia):
-        path = obj.ruta_archivo
-        if not path:
+        value = obj.ruta_archivo
+        if not value:
             return None
 
-        if path.startswith("http://") or path.startswith("https://"):
-            return path
+        # Si ya es una URL completa (S3/Supabase), devolverla tal cual
+        if isinstance(value, str) and (value.startswith("http://") or value.startswith("https://") or value.startswith("data:")):
+            return value
 
         request = self.context.get("request")
-        if request and path.startswith("/"):
-            return request.build_absolute_uri(path)
+        media_prefix = settings.MEDIA_URL or "/media/"
+        
+        # Construir ruta relativa limpia
+        clean_path = str(value).lstrip('/')
+        if not clean_path.startswith("media/"):
+             # Si no tiene el prefijo de media en el string, aseguramos que esté en el path final
+             full_path = f"{media_prefix}{clean_path}"
+        else:
+             # Si ya lo tiene, solo aseguramos el leading slash si es para absolute_uri
+             full_path = f"/{clean_path}"
 
-        return path
+        return request.build_absolute_uri(full_path) if request else full_path
 
 
 class EvaluacionGarantiaSerializer(serializers.ModelSerializer):
@@ -228,6 +260,10 @@ class PrestamoListSerializer(serializers.ModelSerializer):
 
     def get_estado_flujo(self, obj: Prestamo):
         if obj.fecha_desembolso:
+            # Revisar si el saldo ya llegó a 0
+            ultimo_mov = obj.movimientos_hoja_cuenta.order_by("-id").first()
+            if ultimo_mov and ultimo_mov.saldo_actual <= 0:
+                return "finalizado"
             return "desembolsado"
         if obj.fecha_aprobacion:
             return "aprobado_pendiente_desembolso"
@@ -243,6 +279,8 @@ class PrestamoDetailSerializer(PrestamoListSerializer):
     cliente_telefono = serializers.SerializerMethodField()
     monto_total = serializers.SerializerMethodField()
     mora = serializers.SerializerMethodField()
+    cliente_informacion_laboral = serializers.SerializerMethodField()
+    cliente_fotos = serializers.SerializerMethodField()
 
     class Meta(PrestamoListSerializer.Meta):
         fields = PrestamoListSerializer.Meta.fields + [
@@ -254,6 +292,8 @@ class PrestamoDetailSerializer(PrestamoListSerializer):
             "cliente_telefono",
             "monto_total",
             "mora",
+            "cliente_informacion_laboral",
+            "cliente_fotos",
         ]
     
     def get_cliente_telefono(self, obj):
@@ -288,6 +328,16 @@ class PrestamoDetailSerializer(PrestamoListSerializer):
             many=True,
             context=self.context,
         ).data
+
+    def get_cliente_informacion_laboral(self, obj: Prestamo):
+        from apps.clientes.serializers import ClienteDetailSerializer
+        serializer = ClienteDetailSerializer(obj.cliente, context=self.context)
+        return serializer.get_informacion_laboral(obj.cliente)
+
+    def get_cliente_fotos(self, obj: Prestamo):
+        from apps.clientes.serializers import ClienteDetailSerializer
+        serializer = ClienteDetailSerializer(obj.cliente, context=self.context)
+        return serializer.get_fotos(obj.cliente)
 
 
 class GarantiaFotoInputSerializer(serializers.Serializer):
@@ -441,9 +491,10 @@ class PrestamoAprobacionSerializer(serializers.Serializer):
                     fecha_inicio=timezone.localdate(),
                 )
 
-            if cliente.cartera_id != cartera_principal.id:
+            if cliente.cartera_id != cartera_principal.id or cliente.estado_cliente != "activo":
                 cliente.cartera = cartera_principal
-                cliente.save(update_fields=["cartera"])
+                cliente.estado_cliente = "activo"
+                cliente.save(update_fields=["cartera", "estado_cliente"])
 
         prestamo.admin_aprobador = user
         prestamo.fecha_aprobacion = timezone.localdate()
@@ -462,10 +513,111 @@ class PrestamoDesembolsoSerializer(serializers.Serializer):
     @transaction.atomic
     def save(self, **kwargs):
         prestamo: Prestamo = self.context["prestamo"]
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        # Check caja balance
+        caja = Caja.objects.first()
+        if not caja:
+            raise serializers.ValidationError({"detail": "No se encontró caja fuerte configurada."})
+
+        if caja.saldo_actual < prestamo.monto_solicitado:
+            raise serializers.ValidationError({"detail": "Fondos insuficientes en caja fuerte para este desembolso."})
 
         prestamo.fecha_desembolso = timezone.localdate()
         prestamo.save(update_fields=["fecha_desembolso"])
+
+        # Update Caja and register Desembolso
+        caja.saldo_actual -= prestamo.monto_solicitado
+        caja.save(update_fields=["saldo_actual"])
+
+        desembolso = Desembolso.objects.create(
+            prestamo=prestamo,
+            usuario_entrega=user,
+            monto_desembolsado=prestamo.monto_solicitado,
+            metodo_desembolso="efectivo",
+            observaciones=self.validated_data.get("observaciones", "")
+        )
+
+        EgresoCaja.objects.create(
+            caja=caja,
+            usuario_registra=user,
+            desembolso=desembolso,
+            tipo_egreso="Desembolso de Préstamo",
+            monto=prestamo.monto_solicitado,
+            descripcion=f"Desembolso para préstamo #{prestamo.id} - {prestamo.cliente.nombre_completo}"
+        )
+
+        # ── Generar cuotas del préstamo ─────────────────────────────────
+        self._crear_cuotas(prestamo)
+
         return prestamo
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _add_period(fecha, periodicidad: str, n: int):
+        """Devuelve fecha + n períodos según la periodicidad del plan."""
+        from datetime import timedelta
+        import calendar
+
+        p = periodicidad.lower()
+        if p == "diario":
+            return fecha + timedelta(days=n)
+        if p == "semanal":
+            return fecha + timedelta(weeks=n)
+        if p == "quincenal":
+            return fecha + timedelta(days=15 * n)
+        # mensual (default)
+        month = fecha.month - 1 + n
+        year  = fecha.year + month // 12
+        month = month % 12 + 1
+        day   = min(fecha.day, calendar.monthrange(year, month)[1])
+        return fecha.replace(year=year, month=month, day=day)
+
+    def _crear_cuotas(self, prestamo: Prestamo):
+        """Crea el calendario de cuotas para el préstamo recién desembolsado."""
+        plan = prestamo.plan
+        if not plan:
+            return
+
+        num_cuotas = plan.numero_cuotas
+        if not num_cuotas or num_cuotas <= 0:
+            return
+
+        # Monto total = capital + interés
+        monto_total = prestamo.monto_solicitado * (
+            Decimal("1") + prestamo.interes / Decimal("100")
+        )
+        cuota_base = (monto_total / Decimal(num_cuotas)).quantize(Decimal("0.01"))
+
+        # Eliminar cuotas anteriores por si acaso
+        Cuota.objects.filter(prestamo=prestamo).delete()
+
+        periodicidad = plan.periodicidad or "mensual"
+        # El primer pago es exactamente al mes del desembolso
+        fecha_primera_cuota = self._add_period(prestamo.fecha_desembolso, "mensual", 1)
+
+        cuotas = []
+        for i in range(1, num_cuotas + 1):
+            if i == 1:
+                fecha_vencimiento = fecha_primera_cuota
+            else:
+                # Las siguientes cuotas se calculan a partir de la primera
+                fecha_vencimiento = self._add_period(fecha_primera_cuota, periodicidad, i - 1)
+            
+            cuotas.append(
+                Cuota(
+                    plan=plan,
+                    prestamo=prestamo,
+                    numero_cuota=i,
+                    fecha_vencimiento=fecha_vencimiento,
+                    monto_cuota=cuota_base,
+                    saldo_cuota=cuota_base,
+                    mora_generada=Decimal("0.00"),
+                    estado_cuota="pendiente",
+                )
+            )
+        Cuota.objects.bulk_create(cuotas)
 
 
 class PagoCreateSerializer(serializers.Serializer):
@@ -484,25 +636,34 @@ class PagoCreateSerializer(serializers.Serializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
 
-        prestamo = Prestamo.objects.get(pk=validated_data["prestamo_id"])
+        prestamo = Prestamo.objects.select_related("plan").get(
+            pk=validated_data["prestamo_id"]
+        )
+        monto_pagado: Decimal = validated_data["monto_pagado"]
 
         pago = Pago.objects.create(
             prestamo=prestamo,
             usuario_registra=user,
             fecha_pago=timezone.now(),
-            monto_pagado=validated_data["monto_pagado"],
+            monto_pagado=monto_pagado,
             tipo_pago=validated_data["tipo_pago"],
-            estado="registrado",
+            estado="pendiente_validacion",
             observaciones=(validated_data.get("observaciones") or "").strip() or None,
         )
 
+        # ── Actualizar Hoja de Cuenta ───────────────────────────────────
         ultimo_saldo = (
             prestamo.movimientos_hoja_cuenta.order_by("-id")
             .values_list("saldo_actual", flat=True)
             .first()
         )
-        saldo_base = ultimo_saldo if ultimo_saldo is not None else prestamo.monto_solicitado
-        saldo_actual = Decimal(saldo_base) - validated_data["monto_pagado"]
+        if ultimo_saldo is not None:
+            saldo_base = Decimal(ultimo_saldo)
+        else:
+            interes_monto = prestamo.monto_solicitado * (prestamo.interes / Decimal("100"))
+            saldo_base = prestamo.monto_solicitado + interes_monto
+
+        saldo_actual = saldo_base - monto_pagado
 
         HojaCuenta.objects.create(
             prestamo=prestamo,
@@ -512,7 +673,87 @@ class PagoCreateSerializer(serializers.Serializer):
             saldo_actual=saldo_actual,
         )
 
+        # ── Aplicar pago a cuotas ───────────────────────────────────────
+        self._aplicar_a_cuotas(prestamo, monto_pagado)
+
         return pago
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _aplicar_a_cuotas(prestamo: Prestamo, monto_pagado: Decimal):
+        """
+        Distribuye el monto pagado contra las cuotas pendientes ordenadas
+        por número de cuota (FIFO).  Reglas:
+          - Si la cuota queda saldada → estado_cuota = 'pagada'.
+          - Si la cuota queda parcialmente saldada → estado_cuota = 'parcial',
+            y a la siguiente cuota se le suma el saldo restante MÁS la mora
+            (mora% × cuota_base).
+          - Mora siempre se calcula sobre cuota_base (monto original por cuota),
+            no sobre el saldo restante.
+        """
+        plan = prestamo.plan
+        if not plan:
+            return
+
+        # Cuota base original (sin mora acumulada)
+        monto_total = prestamo.monto_solicitado * (
+            Decimal("1") + prestamo.interes / Decimal("100")
+        )
+        cuota_base = (monto_total / Decimal(plan.numero_cuotas)).quantize(
+            Decimal("0.01")
+        )
+        mora_pct = plan.mora / Decimal("100")
+
+        cuotas = list(
+            Cuota.objects.filter(
+                prestamo=prestamo,
+                estado_cuota__in=["pendiente", "parcial", "vencida"],
+            ).order_by("numero_cuota")
+        )
+
+        restante = monto_pagado
+
+        for idx, cuota in enumerate(cuotas):
+            if restante <= Decimal("0"):
+                break
+
+            if restante >= cuota.saldo_cuota:
+                # Pago completo de esta cuota
+                restante -= cuota.saldo_cuota
+                cuota.saldo_cuota = Decimal("0")
+                cuota.estado_cuota = "pagada"
+                cuota.save(update_fields=["saldo_cuota", "estado_cuota"])
+            else:
+                # Pago parcial: saldo pendiente + mora van a la siguiente cuota
+                saldo_pendiente = cuota.saldo_cuota - restante
+                mora_generada  = cuota_base * mora_pct  # siempre sobre cuota_base
+
+                cuota.saldo_cuota   = Decimal("0")
+                cuota.mora_generada = mora_generada
+                cuota.estado_cuota  = "parcial"
+                cuota.save(
+                    update_fields=["saldo_cuota", "mora_generada", "estado_cuota"]
+                )
+
+                # Sumar saldo + mora a la siguiente cuota pendiente
+                prox = cuotas[idx + 1] if idx + 1 < len(cuotas) else None
+                if prox is None:
+                    prox = (
+                        Cuota.objects.filter(
+                            prestamo=prestamo,
+                            numero_cuota__gt=cuota.numero_cuota,
+                            estado_cuota__in=["pendiente", "parcial"],
+                        )
+                        .order_by("numero_cuota")
+                        .first()
+                    )
+
+                if prox:
+                    prox.monto_cuota += saldo_pendiente + mora_generada
+                    prox.saldo_cuota += saldo_pendiente + mora_generada
+                    prox.save(update_fields=["monto_cuota", "saldo_cuota"])
+
+                restante = Decimal("0")
 
 
 class LoanSimulationSerializer(serializers.Serializer):

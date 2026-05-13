@@ -317,3 +317,39 @@ class EvaluacionGarantia(models.Model):
 
     def __str__(self):
         return f"Evaluación {self.id} - Garantía {self.garantia_id}"
+class Documento(models.Model):
+    id = models.BigAutoField(primary_key=True, db_column="id_documento")
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.DO_NOTHING,
+        db_column="id_cliente",
+        related_name="documentos_asociados",
+        null=True,
+        blank=True,
+    )
+    prestamo = models.ForeignKey(
+        Prestamo,
+        on_delete=models.DO_NOTHING,
+        db_column="id_prestamo",
+        related_name="documentos",
+        null=True,
+        blank=True,
+    )
+    usuario_sube = models.ForeignKey(
+        Usuario,
+        on_delete=models.DO_NOTHING,
+        db_column="id_usuario_sube",
+        related_name="documentos_subidos",
+        null=True,
+        blank=True,
+    )
+    tipo_documento = models.CharField(max_length=80, db_column="tipo_documento")
+    nombre_archivo = models.CharField(max_length=200, db_column="nombre_archivo")
+    ruta_archivo = models.TextField(db_column="ruta_archivo")
+    estado_documento = models.CharField(max_length=30, db_column="estado_documento")
+    fecha_subida = models.DateTimeField(db_column="fecha_subida")
+    observaciones = models.TextField(db_column="observaciones", null=True, blank=True)
+
+    class Meta:
+        db_table = "documentos"
+        managed = False

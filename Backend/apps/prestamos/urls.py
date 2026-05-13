@@ -1,5 +1,4 @@
 from django.urls import path
-
 from .views import (
     GarantiaPhotoUploadView,
     LoanApproveView,
@@ -12,9 +11,19 @@ from .views import (
     LoansPendingListView,
     LoanSimulationView,
     PlansView,
+    DashboardStatsView,
+    DailyRouteView,
+    ClientesAtrasadosView,
+    DailyCollectionsSummaryView,
+    BulkValidateCollectionsView,
+    BulkRejectCollectionsView,
+    DescargarDocumentoView,
 )
 
 urlpatterns = [
+    path("<str:loan_id>/documento/<str:doc_type>/", DescargarDocumentoView.as_view(), name="descargar_documento"),
+    path("<str:loan_id>/documento/<str:doc_type>", DescargarDocumentoView.as_view()),
+    
     path("", LoansListView.as_view(), name="loans-list"),
     path("create/", LoansCreateView.as_view(), name="loans-create"),
     path("pending/", LoansPendingListView.as_view(), name="loans-pending"),
@@ -30,4 +39,10 @@ urlpatterns = [
     path("<int:loan_id>/", LoanDetailView.as_view(), name="loans-detail"),
     path("<int:loan_id>/approve/", LoanApproveView.as_view(), name="loans-approve"),
     path("<int:loan_id>/disburse/", LoanDisburseView.as_view(), name="loans-disburse"),
+    path("dashboard-stats/", DashboardStatsView.as_view(), name="loans-dashboard-stats"),
+    path("daily-route/", DailyRouteView.as_view(), name="loans-daily-route"),
+    path("overdue/", ClientesAtrasadosView.as_view(), name="loans-overdue"),
+    path("collections-summary/", DailyCollectionsSummaryView.as_view(), name="loans-collections-summary"),
+    path("bulk-validate-collections/", BulkValidateCollectionsView.as_view(), name="loans-bulk-validate-collections"),
+    path("bulk-reject-collections/", BulkRejectCollectionsView.as_view(), name="loans-bulk-reject-collections"),
 ]

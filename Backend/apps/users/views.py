@@ -227,19 +227,16 @@ class MePhotoUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        from config.storage_backends import AvatarsStorage
+        storage = AvatarsStorage()
+        
         extension = Path(photo.name).suffix or ".jpg"
         filename = f"{request.user.id}_{uuid.uuid4().hex}{extension}"
-        relative_dir = Path("profile_photos")
-        relative_path = relative_dir / filename
-        absolute_dir = Path(settings.MEDIA_ROOT) / relative_dir
-        absolute_dir.mkdir(parents=True, exist_ok=True)
-        absolute_path = absolute_dir / filename
+        
+        saved_name = storage.save(filename, photo)
+        full_url = storage.url(saved_name)
 
-        with absolute_path.open("wb+") as destination:
-            for chunk in photo.chunks():
-                destination.write(chunk)
-
-        request.user.ruta_foto_perfil = f"{settings.MEDIA_URL}{relative_path.as_posix()}"
+        request.user.ruta_foto_perfil = full_url
         request.user.save(update_fields=["ruta_foto_perfil"])
 
         output = SessionUserSerializer(request.user, context={"request": request})

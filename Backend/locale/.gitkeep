@@ -1,0 +1,2 @@
+# This file exists to ensure the locale directory is created and tracked.
+# It prevents an Input/output error with Django's StatReloader in Docker.

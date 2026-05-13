@@ -33,3 +33,14 @@ def require_app_permission(permission_code: str):
 
     _RequireAppPermission.__name__ = f"RequirePermission_{permission_code}"
     return _RequireAppPermission
+
+
+class IsAdminUser(BasePermission):
+    message = "Esta sección es exclusiva para administradores."
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated or not user.is_active:
+            return False
+
+        return getattr(user, "is_staff", False)

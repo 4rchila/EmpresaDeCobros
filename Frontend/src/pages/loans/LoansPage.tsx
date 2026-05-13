@@ -174,6 +174,63 @@ type PrestamoDetalle = PrestamoItem & {
   total_pagar?: string | number | null
   mora?: string | number | null
   garantias?: PrestamoGarantiaDetalle[]
+  cliente_informacion_laboral?: {
+    foto_recibo_luz: string | null
+  } | null
+  cliente_fotos?: Array<{
+    id: number
+    ruta_archivo: string
+    descripcion: string | null
+  }>
+}
+
+function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed-top w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in"
+      style={{
+        zIndex: 2147483647,
+        background: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="position-relative"
+        style={{ maxWidth: '90%', maxHeight: '90%' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="btn-modern-dark position-absolute"
+          style={{
+            top: '-40px',
+            right: '-10px',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <img
+          src={src}
+          alt="Preview"
+          className="img-fluid rounded shadow-lg"
+          style={{
+            maxHeight: '85vh',
+            objectFit: 'contain',
+            border: '2px solid rgba(204, 166, 65, 0.3)',
+          }}
+        />
+      </div>
+    </div>
+  )
 }
 
 type PlanItem = {
@@ -282,6 +339,8 @@ function LoansPage({ user }: LoansPageProps) {
   const canCreateLoan =
     isSecretary || isAdvisor || hasPermission(user, ['crear_prestamo'])
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
   const tabs: TabItem[] = [
     {
       key: 'nueva',
@@ -347,7 +406,7 @@ function LoansPage({ user }: LoansPageProps) {
       case 'nueva':
         return <VistaNuevaSolicitud />
       case 'solicitudes':
-        return <VistaSolicitudPendiente />
+        return <VistaSolicitudPendiente setPreviewImage={setPreviewImage} />
       case 'desembolsos':
         return <VistaDesembolsoPendiente />
       case 'simulador':
@@ -412,6 +471,10 @@ function LoansPage({ user }: LoansPageProps) {
       <div className="extruded-form-card p-4 p-lg-5 flex-fill overflow-auto custom-scrollbar">
         {renderView()}
       </div>
+
+      {previewImage && (
+        <ImageModal src={previewImage} onClose={() => setPreviewImage(null)} />
+      )}
     </div>
   )
 }
@@ -1321,8 +1384,8 @@ function VistaNuevaSolicitud() {
             {uploadingPhotos
               ? 'SUBIENDO FOTOS...'
               : savingLoan
-              ? 'REGISTRANDO...'
-              : 'REGISTRAR PRÉSTAMO'}
+                ? 'REGISTRANDO...'
+                : 'REGISTRAR PRÉSTAMO'}
           </button>
         </div>
       </form>
@@ -1330,7 +1393,7 @@ function VistaNuevaSolicitud() {
   )
 }
 
-function VistaSolicitudPendiente() {
+function VistaSolicitudPendiente({ setPreviewImage }: { setPreviewImage: (src: string | null) => void }) {
   const [query, setQuery] = useState('')
   const [section, setSection] = useState<'clientes' | 'prestamos'>(() => {
     const saved = sessionStorage.getItem(LOANS_PENDING_SECTION_KEY)
@@ -1794,7 +1857,46 @@ function VistaSolicitudPendiente() {
               <div className="mt-4">
                 <h6 className="text-gold mb-3">Fotografías</h6>
                 <div className="row g-3">
-                  {selectedClientDetail.fotos.length === 0 ? (
+                  {/* Foto de Recibo de Luz (desde Información Laboral) */}
+                  {selectedClientDetail.informacion_laboral?.foto_recibo_luz && (
+                    <div className="col-md-4">
+                      <div className="inner-dark-box p-2">
+                        <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                          Recibo de Luz
+                        </small>
+                        <div
+                          className="rounded overflow-hidden mb-2"
+                          style={{ height: '140px', background: '#000' }}
+                        >
+                          <img
+                            src={
+                              selectedClientDetail.informacion_laboral
+                                .foto_recibo_luz
+                            }
+                            alt="Recibo de Luz"
+                            className="w-100 h-100"
+                            style={{ objectFit: 'contain' }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                          style={{ textDecoration: 'none', fontSize: '11px' }}
+                          onClick={() =>
+                            setPreviewImage(
+                              selectedClientDetail.informacion_laboral!
+                                .foto_recibo_luz,
+                            )
+                          }
+                        >
+                          Ampliar imagen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedClientDetail.fotos.length === 0 &&
+                    !selectedClientDetail.informacion_laboral?.foto_recibo_luz ? (
                     <div className="col-12">
                       <div className="inner-dark-box p-3 text-white-50">
                         No hay fotografías registradas.
@@ -1803,19 +1905,35 @@ function VistaSolicitudPendiente() {
                   ) : (
                     selectedClientDetail.fotos.map((foto) => (
                       <div key={foto.id} className="col-md-4">
-                        <div className="inner-dark-box p-3">
-                          <small
-                            className="text-white-50 d-block mb-2 file-name"
-                            title={foto.descripcion || 'Fotografía'}
-                          >
-                            {foto.descripcion || 'Fotografía'}
+                        <div className="inner-dark-box p-2">
+                          <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                            {foto.descripcion === 'foto_vivienda'
+                              ? 'Foto de Vivienda'
+                              : foto.descripcion || 'Fotografía'}
                           </small>
-                          <span
-                            className="text-gold file-name"
-                            title={foto.ruta_archivo || ''}
+                          <div
+                            className="rounded overflow-hidden mb-2"
+                            style={{ height: '140px', background: '#000' }}
                           >
-                            {foto.ruta_archivo}
-                          </span>
+                            <img
+                              src={foto.ruta_archivo}
+                              alt={foto.descripcion || 'Foto'}
+                              className="w-100 h-100"
+                              style={{
+                                objectFit: 'contain',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => setPreviewImage(foto.ruta_archivo)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                            style={{ textDecoration: 'none', fontSize: '11px' }}
+                            onClick={() => setPreviewImage(foto.ruta_archivo)}
+                          >
+                            Ampliar imagen
+                          </button>
                         </div>
                       </div>
                     ))
@@ -1899,7 +2017,7 @@ function VistaSolicitudPendiente() {
                     {selectedLoanDetail.cliente_telefono || '—'}
                   </p>
                 </div>
-          
+
                 <button
                   type="button"
                   className="btn-modern-dark px-3 py-2"
@@ -1909,7 +2027,7 @@ function VistaSolicitudPendiente() {
                   Cerrar
                 </button>
               </div>
-          
+
               <div className="row g-3">
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
@@ -1917,7 +2035,7 @@ function VistaSolicitudPendiente() {
                     <strong className="text-white">#{selectedLoanDetail.id}</strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Monto</small>
@@ -1926,7 +2044,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Interés</small>
@@ -1935,7 +2053,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Destino</small>
@@ -1944,7 +2062,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Periodicidad</small>
@@ -1953,7 +2071,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Cuotas</small>
@@ -1962,7 +2080,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Mora</small>
@@ -1971,7 +2089,7 @@ function VistaSolicitudPendiente() {
                     </strong>
                   </div>
                 </div>
-          
+
                 <div className="col-md-4">
                   <div className="inner-dark-box p-3">
                     <small className="text-white-50 d-block">Estado</small>
@@ -1981,58 +2099,188 @@ function VistaSolicitudPendiente() {
                   </div>
                 </div>
               </div>
-          
+
               <div className="monto-resultado-box p-3 mt-4 d-flex align-items-center justify-content-between">
                 <strong className="text-white-50">Monto Total</strong>
                 <strong className="text-gold" style={{ fontSize: '20px' }}>
                   Q {formatMoney(selectedLoanDetail.monto_total || selectedLoanDetail.total_pagar)}
                 </strong>
               </div>
-          
+
+              <div className="mt-4">
+                <h6 className="text-gold mb-3">Expediente del Cliente</h6>
+                <div className="row g-3">
+                  {/* Foto de Recibo de Luz del Cliente */}
+                  {selectedLoanDetail.cliente_informacion_laboral
+                    ?.foto_recibo_luz && (
+                      <div className="col-md-4">
+                        <div className="inner-dark-box p-2">
+                          <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                            Recibo de Luz
+                          </small>
+                          <div
+                            className="rounded overflow-hidden mb-2"
+                            style={{ height: '140px', background: '#000' }}
+                          >
+                            <img
+                              src={
+                                selectedLoanDetail.cliente_informacion_laboral
+                                  .foto_recibo_luz
+                              }
+                              alt="Recibo de Luz"
+                              className="w-100 h-100"
+                              style={{ objectFit: 'contain', cursor: 'pointer' }}
+                              onClick={() =>
+                                setPreviewImage(
+                                  selectedLoanDetail.cliente_informacion_laboral!
+                                    .foto_recibo_luz,
+                                )
+                              }
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                            style={{ textDecoration: 'none', fontSize: '11px' }}
+                            onClick={() =>
+                              setPreviewImage(
+                                selectedLoanDetail.cliente_informacion_laboral!
+                                  .foto_recibo_luz,
+                              )
+                            }
+                          >
+                            Ampliar imagen
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Fotos del Cliente */}
+                  {selectedLoanDetail.cliente_fotos?.map((foto) => (
+                    <div key={foto.id} className="col-md-4">
+                      <div className="inner-dark-box p-2">
+                        <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                          {foto.descripcion === 'foto_vivienda'
+                            ? 'Foto de Vivienda'
+                            : foto.descripcion || 'Foto Cliente'}
+                        </small>
+                        <div
+                          className="rounded overflow-hidden mb-2"
+                          style={{ height: '140px', background: '#000' }}
+                        >
+                          <img
+                            src={foto.ruta_archivo}
+                            alt={foto.descripcion || 'Foto'}
+                            className="w-100 h-100"
+                            style={{ objectFit: 'contain', cursor: 'pointer' }}
+                            onClick={() => setPreviewImage(foto.ruta_archivo)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                          style={{ textDecoration: 'none', fontSize: '11px' }}
+                          onClick={() => setPreviewImage(foto.ruta_archivo)}
+                        >
+                          Ampliar imagen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {(!selectedLoanDetail.cliente_fotos ||
+                    selectedLoanDetail.cliente_fotos.length === 0) &&
+                    !selectedLoanDetail.cliente_informacion_laboral
+                      ?.foto_recibo_luz && (
+                      <div className="col-12">
+                        <div className="inner-dark-box p-3 text-white-50">
+                          No hay fotos del cliente disponibles.
+                        </div>
+                      </div>
+                    )}
+                </div>
+              </div>
+
               <div className="mt-4">
                 <h6 className="text-gold mb-3">Garantías</h6>
-          
+
                 {selectedLoanDetail.garantias?.length ? (
                   selectedLoanDetail.garantias.map((garantia, index) => (
-                    <div key={garantia.id || index} className="inner-dark-box p-4 mb-3">
+                    <div
+                      key={garantia.id || index}
+                      className="inner-dark-box p-4 mb-3"
+                    >
                       <h6 className="text-gold mb-3">GARANTÍA {index + 1}</h6>
-          
+
                       <div className="row g-3">
                         <div className="col-md-4">
-                          <small className="text-white-50 d-block">Descripción</small>
+                          <small className="text-white-50 d-block">
+                            Descripción
+                          </small>
                           <strong className="text-white">
                             {garantia.descripcion || '—'}
                           </strong>
                         </div>
-          
+
                         <div className="col-md-4">
-                          <small className="text-white-50 d-block">Categoría</small>
+                          <small className="text-white-50 d-block">
+                            Categoría
+                          </small>
                           <strong className="text-white">
                             {garantia.tipo_garantia || '—'}
                           </strong>
                         </div>
-          
+
                         <div className="col-md-4">
-                          <small className="text-white-50 d-block">Valor estimado</small>
+                          <small className="text-white-50 d-block">
+                            Valor estimado
+                          </small>
                           <strong className="text-gold">
                             Q {formatMoney(garantia.valor_estimado)}
                           </strong>
                         </div>
-          
+
                         <div className="col-md-4">
-                          <small className="text-white-50 d-block">Estado general</small>
+                          <small className="text-white-50 d-block">
+                            Estado general
+                          </small>
                           <strong className="text-white">
                             {garantia.estado_garantia || '—'}
                           </strong>
                         </div>
-          
-                        <div className="col-md-4">
-                          <small className="text-white-50 d-block">Fotografías</small>
-                          <strong className="text-white">
-                            {garantia.fotos?.length || 0} imagen(es) registrada(s)
-                          </strong>
-                        </div>
                       </div>
+
+                      {garantia.fotos && garantia.fotos.length > 0 && (
+                        <div className="mt-4">
+                          <small className="text-white-50 d-block mb-3">
+                            Fotografías de la Garantía
+                          </small>
+                          <div className="row g-2">
+                            {garantia.fotos.map((foto, fIdx) => (
+                              <div key={fIdx} className="col-md-3">
+                                <div
+                                  className="rounded overflow-hidden border border-secondary"
+                                  style={{
+                                    height: '100px',
+                                    background: '#000',
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() =>
+                                    setPreviewImage(foto.ruta_archivo || null)
+                                  }
+                                >
+                                  <img
+                                    src={foto.ruta_archivo || ''}
+                                    alt={foto.descripcion || 'Garantía'}
+                                    className="w-100 h-100"
+                                    style={{ objectFit: 'contain' }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -2045,6 +2293,7 @@ function VistaSolicitudPendiente() {
           )}
         </div>
       )}
+
     </>
   )
 }

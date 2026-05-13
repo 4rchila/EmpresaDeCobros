@@ -50,6 +50,83 @@ type SearchResult = {
   asesor_nombre: string | null
 }
 
+type ClienteDetail = SearchResult & {
+  ingresos_mensuales: string
+  egreso_aproximado_mensual: string
+  fecha_nacimiento: string | null
+  informacion_laboral: {
+    lugar_trabajo: string | null
+    direccion_trabajo: string | null
+    puesto: string | null
+    tiempo_laborando: string | null
+    ingreso_mensual: string | null
+    egreso_mensual: string | null
+    otras_fuentes_ingreso: string | null
+    foto_recibo_luz: string | null
+  } | null
+  referencias: Array<{
+    id: number
+    nombres: string
+    telefono: string | null
+    parentesco: string | null
+    direccion: string | null
+  }>
+  fotos: Array<{
+    id: number
+    ruta_archivo: string
+    descripcion: string | null
+  }>
+}
+
+function ImageModal({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      className="fixed-top w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in"
+      style={{
+        zIndex: 2147483647,
+        background: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="position-relative"
+        style={{ maxWidth: '90%', maxHeight: '90%' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="btn-modern-dark position-absolute"
+          style={{
+            top: '-40px',
+            right: '-10px',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            padding: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <img
+          src={src}
+          alt="Preview"
+          className="img-fluid rounded shadow-lg"
+          style={{
+            maxHeight: '85vh',
+            objectFit: 'contain',
+            border: '2px solid rgba(204, 166, 65, 0.3)',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 type BlacklistItem = {
   id: number
   fecha_ingreso: string
@@ -230,6 +307,8 @@ function CreditorsPage({ user }: CreditorsPageProps) {
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const [saveError, setSaveError] = useState('')
+  const [uploadingVivienda, setUploadingVivienda] = useState(false)
+  const [uploadingRecibo, setUploadingRecibo] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -251,6 +330,11 @@ function CreditorsPage({ user }: CreditorsPageProps) {
     number | null
   >(null)
   const [blacklistActionMessage, setBlacklistActionMessage] = useState('')
+  const [selectedDetail, setSelectedDetail] = useState<ClienteDetail | null>(
+    null,
+  )
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const canCreate = hasPermission(user, 'crear_cliente')
   const canSearch = hasPermission(user, [
@@ -329,12 +413,36 @@ function CreditorsPage({ user }: CreditorsPageProps) {
     )
   }
 
-  const handlePhotoSelection = (
+  const handlePhotoSelection = async (
     field: 'foto_vivienda' | 'foto_recibo_luz',
     file: File | null,
   ) => {
     if (!file) return
-    updateForm(field, file.name)
+
+    const formData = new FormData()
+    formData.append('archivo', file)
+    formData.append('descripcion', field)
+
+    if (field === 'foto_vivienda') setUploadingVivienda(true)
+    else setUploadingRecibo(true)
+
+    try {
+      const { data } = await axios.post(`${API_BASE_URL}/creditors/upload-photo/`, formData, {
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      updateForm(field, data.ruta_archivo)
+      setSaveMessage('Imagen subida correctamente.')
+      setTimeout(() => setSaveMessage(''), 3000)
+    } catch (err) {
+      console.error('Error uploading photo', err)
+      setSaveError('No se pudo subir la imagen al servidor. Verifica tu conexión.')
+    } finally {
+      if (field === 'foto_vivienda') setUploadingVivienda(false)
+      else setUploadingRecibo(false)
+    }
   }
 
   const resetCreateForm = () => {
@@ -522,6 +630,28 @@ function CreditorsPage({ user }: CreditorsPageProps) {
     }
   }
 
+  const verDetalleCliente = async (clienteId: number): Promise<void> => {
+    setLoadingDetail(true)
+    setSearchError('')
+
+    try {
+      const { data } = await axios.get<ClienteDetail>(
+        `${API_BASE_URL}/creditors/${clienteId}/`,
+        {
+          headers: authHeaders(),
+        },
+      )
+      setSelectedDetail(data)
+    } catch (error: unknown) {
+      setSelectedDetail(null)
+      setSearchError(
+        getErrorDetail(error, 'No se pudo cargar el detalle del cliente.'),
+      )
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
   const loadBlacklist = useCallback(
     async (query: string = blacklistQuery.trim()): Promise<void> => {
       setBlacklistError('')
@@ -637,6 +767,12 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             searching={searching}
             error={searchError}
             results={searchResults}
+            onViewDetail={verDetalleCliente}
+            loadingDetail={loadingDetail}
+            selectedDetail={selectedDetail}
+            onCloseDetail={() => setSelectedDetail(null)}
+            previewImage={previewImage}
+            setPreviewImage={setPreviewImage}
           />
         ) : (
           <VistaSinPermiso mensaje="No tienes permiso para consultar clientes." />
@@ -683,6 +819,12 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             searching={false}
             error=""
             results={[]}
+            onViewDetail={() => {}}
+            loadingDetail={false}
+            selectedDetail={null}
+            onCloseDetail={() => {}}
+            previewImage={previewImage}
+            setPreviewImage={setPreviewImage}
           />
         )
     }
@@ -1167,13 +1309,23 @@ function VistaNuevoCliente({
                 </svg>
                 Seleccionar Imagen
               </label>
+              {uploadingVivienda && (
+                <div className="mt-2 text-gold small animate-pulse">
+                  Subiendo imagen...
+                </div>
+              )}
               {form.foto_vivienda ? (
-                <small
-                  className="text-white-50 mt-3 file-name"
-                  title={form.foto_vivienda}
-                >
-                  {form.foto_vivienda}
-                </small>
+                <div className="mt-3 d-flex flex-column align-items-center">
+                  <div className="rounded overflow-hidden mb-2" style={{ width: '80px', height: '60px', border: '1px solid #cca641' }}>
+                    <img src={form.foto_vivienda} alt="Vivienda" className="w-100 h-100 object-fit-cover" />
+                  </div>
+                  <small
+                    className="text-white-50 file-name"
+                    title={form.foto_vivienda}
+                  >
+                    Imagen seleccionada
+                  </small>
+                </div>
               ) : null}
             </div>
           </div>
@@ -1211,13 +1363,23 @@ function VistaNuevoCliente({
                 </svg>
                 Seleccionar Imagen
               </label>
+              {uploadingRecibo && (
+                <div className="mt-2 text-gold small animate-pulse">
+                  Subiendo imagen...
+                </div>
+              )}
               {form.foto_recibo_luz ? (
-                <small
-                  className="text-white-50 mt-3 file-name"
-                  title={form.foto_recibo_luz}
-                >
-                  {form.foto_recibo_luz}
-                </small>
+                <div className="mt-3 d-flex flex-column align-items-center">
+                  <div className="rounded overflow-hidden mb-2" style={{ width: '80px', height: '60px', border: '1px solid #cca641' }}>
+                    <img src={form.foto_recibo_luz} alt="Recibo" className="w-100 h-100 object-fit-cover" />
+                  </div>
+                  <small
+                    className="text-white-50 file-name"
+                    title={form.foto_recibo_luz}
+                  >
+                    Imagen seleccionada
+                  </small>
+                </div>
               ) : null}
             </div>
           </div>
@@ -1362,6 +1524,12 @@ function VistaBuscarCliente({
   searching,
   error,
   results,
+  onViewDetail,
+  loadingDetail,
+  selectedDetail,
+  onCloseDetail,
+  previewImage,
+  setPreviewImage,
 }: {
   query: string
   onQueryChange: (value: string) => void
@@ -1369,6 +1537,12 @@ function VistaBuscarCliente({
   searching: boolean
   error: string
   results: SearchResult[]
+  onViewDetail: (id: number) => void
+  loadingDetail: boolean
+  selectedDetail: ClienteDetail | null
+  onCloseDetail: () => void
+  previewImage: string | null
+  setPreviewImage: (url: string | null) => void
 }) {
   return (
     <>
@@ -1433,7 +1607,7 @@ function VistaBuscarCliente({
           results.map((item) => (
             <div key={item.id} className="inner-dark-box p-4">
               <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                <div>
+                <div className="flex-fill">
                   <h5 className="text-white mb-1">{item.nombre_completo}</h5>
                   <p className="text-white-50 mb-1">
                     DPI: {item.dpi || '—'} | NIT: {item.nit || '—'}
@@ -1456,11 +1630,306 @@ function VistaBuscarCliente({
                     {item.en_lista_negra ? '• EN LISTA NEGRA' : ''}
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  className="btn-gold-action px-4 py-2"
+                  style={{ borderRadius: '8px' }}
+                  onClick={() => onViewDetail(item.id)}
+                  disabled={loadingDetail && selectedDetail?.id === item.id}
+                >
+                  {loadingDetail && selectedDetail?.id === item.id
+                    ? 'Cargando...'
+                    : 'Ver detalles'}
+                </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {selectedDetail && (
+        <div className="reference-box p-4 mt-5 animate-fade-in">
+          <div className="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <h5 className="text-white mb-0">
+              <span className="text-gold me-2">Detalles:</span>
+              {selectedDetail.nombre_completo}
+            </h5>
+            <button
+              type="button"
+              className="btn-modern-dark px-3 py-1"
+              style={{ borderRadius: '6px', fontSize: '12px' }}
+              onClick={onCloseDetail}
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <div className="row g-3">
+            <div className="col-md-4">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">DPI</small>
+                <strong className="text-white">
+                  {selectedDetail.dpi || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">NIT</small>
+                <strong className="text-white">
+                  {selectedDetail.nit || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-4">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">Asesor</small>
+                <strong className="text-white">
+                  {selectedDetail.asesor_nombre || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">Dirección</small>
+                <strong className="text-white">
+                  {selectedDetail.direccion || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-2">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">Depto.</small>
+                <strong className="text-white">
+                  {selectedDetail.departamento || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-2">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">Municipio</small>
+                <strong className="text-white">
+                  {selectedDetail.municipio || '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div className="col-md-2">
+              <div className="inner-dark-box p-3">
+                <small className="text-white-50 d-block">Distrito</small>
+                <strong className="text-white">
+                  {selectedDetail.distrito || '—'}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h6 className="text-gold mb-3" style={{ fontSize: '14px' }}>
+              Teléfonos
+            </h6>
+            <div className="row g-3">
+              {selectedDetail.telefonos.map((tel) => (
+                <div key={tel.id} className="col-md-4">
+                  <div className="inner-dark-box p-3">
+                    <small className="text-white-50 d-block">
+                      {tel.tipo || 'teléfono'}
+                    </small>
+                    <strong className="text-white">{tel.numero}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h6 className="text-gold mb-3" style={{ fontSize: '14px' }}>
+              Información Laboral
+            </h6>
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="inner-dark-box p-3">
+                  <small className="text-white-50 d-block">
+                    Lugar de trabajo
+                  </small>
+                  <strong className="text-white">
+                    {selectedDetail.informacion_laboral?.lugar_trabajo || '—'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="col-md-4">
+                <div className="inner-dark-box p-3">
+                  <small className="text-white-50 d-block">Puesto</small>
+                  <strong className="text-white">
+                    {selectedDetail.informacion_laboral?.puesto || '—'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="col-md-4">
+                <div className="inner-dark-box p-3">
+                  <small className="text-white-50 d-block">
+                    Tiempo laborando
+                  </small>
+                  <strong className="text-white">
+                    {selectedDetail.informacion_laboral?.tiempo_laborando ||
+                      '—'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <div className="inner-dark-box p-3">
+                  <small className="text-white-50 d-block">
+                    Ingresos Mensuales
+                  </small>
+                  <strong className="text-white">
+                    Q {selectedDetail.ingresos_mensuales}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <div className="inner-dark-box p-3">
+                  <small className="text-white-50 d-block">
+                    Egresos Mensuales
+                  </small>
+                  <strong className="text-white">
+                    Q {selectedDetail.egreso_aproximado_mensual}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h6 className="text-gold mb-3" style={{ fontSize: '14px' }}>
+              Referencias
+            </h6>
+            <div className="row g-3">
+              {selectedDetail.referencias.map((ref) => (
+                <div key={ref.id} className="col-md-6">
+                  <div className="inner-dark-box p-3">
+                    <strong className="text-white d-block">
+                      {ref.nombres}
+                    </strong>
+                    <small className="text-white-50 d-block">
+                      {ref.parentesco || '—'}
+                    </small>
+                    <small className="text-white-50 d-block">
+                      {ref.telefono || '—'}
+                    </small>
+                    <small className="text-white-50 d-block">
+                      {ref.direccion || '—'}
+                    </small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h6 className="text-gold mb-3" style={{ fontSize: '14px' }}>
+              Fotografías
+            </h6>
+            <div className="row g-3">
+              {/* Foto de Recibo de Luz (desde Información Laboral) */}
+              {selectedDetail.informacion_laboral?.foto_recibo_luz && (
+                <div className="col-md-4">
+                  <div className="inner-dark-box p-2">
+                    <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                      Recibo de Luz
+                    </small>
+                    <div
+                      className="rounded overflow-hidden mb-2"
+                      style={{ height: '140px', background: '#000' }}
+                    >
+                      <img
+                        src={selectedDetail.informacion_laboral.foto_recibo_luz}
+                        alt="Recibo de Luz"
+                        className="w-100 h-100"
+                        style={{ objectFit: 'contain', cursor: 'pointer' }}
+                        onClick={() =>
+                          setPreviewImage(
+                            selectedDetail.informacion_laboral!.foto_recibo_luz,
+                          )
+                        }
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                      style={{ textDecoration: 'none', fontSize: '11px' }}
+                      onClick={() =>
+                        setPreviewImage(
+                          selectedDetail.informacion_laboral!.foto_recibo_luz,
+                        )
+                      }
+                    >
+                      Ampliar imagen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedDetail.fotos.length === 0 &&
+              !selectedDetail.informacion_laboral?.foto_recibo_luz ? (
+                <div className="col-12">
+                  <div className="inner-dark-box p-3 text-white-50">
+                    No hay fotografías registradas.
+                  </div>
+                </div>
+              ) : (
+                selectedDetail.fotos.map((foto) => (
+                  <div key={foto.id} className="col-md-4">
+                    <div className="inner-dark-box p-2">
+                      <small className="text-white-50 d-block mb-2 px-2 pt-1">
+                        {foto.descripcion === 'foto_vivienda'
+                          ? 'Foto de Vivienda'
+                          : foto.descripcion || 'Fotografía'}
+                      </small>
+                      <div
+                        className="rounded overflow-hidden mb-2"
+                        style={{ height: '140px', background: '#000' }}
+                      >
+                        <img
+                          src={foto.ruta_archivo}
+                          alt={foto.descripcion || 'Foto'}
+                          className="w-100 h-100"
+                          style={{ objectFit: 'contain', cursor: 'pointer' }}
+                          onClick={() => setPreviewImage(foto.ruta_archivo)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-link text-gold small px-2 pb-1 d-block border-0 bg-transparent p-0"
+                        style={{ textDecoration: 'none', fontSize: '11px' }}
+                        onClick={() => setPreviewImage(foto.ruta_archivo)}
+                      >
+                        Ampliar imagen
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <ImageModal
+          src={previewImage}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
     </>
   )
 }

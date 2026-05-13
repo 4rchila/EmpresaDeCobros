@@ -1,7 +1,8 @@
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
-from apps.users.models import Role
+from apps.users.models import Role, Usuario
 from apps.users.permissions_map import ROLE_PERMISSIONS, sync_permissions_to_database
 
 
@@ -9,6 +10,7 @@ class Command(BaseCommand):
     help = "Crea roles, permisos base y usuarios de prueba para el login de PrendaSol"
 
     def handle(self, *args, **options):
+        # 1. Sync Roles and Permissions
         roles = {}
         for role_name in ROLE_PERMISSIONS.keys():
             role, _ = Role.objects.get_or_create(name=role_name)
@@ -16,46 +18,55 @@ class Command(BaseCommand):
 
         sync_permissions_to_database()
 
-        User = get_user_model()
+        # 2. Sync Demo Users
         demo_users = [
             {
                 "username": "gerente",
                 "password": "Gerente123*",
-                "first_name": "Admin",
-                "last_name": "PrendaSol",
+                "nombres": "Admin",
+                "apellidos": "PrendaSol",
                 "email": "gerente@prendasol.local",
                 "role": roles["Gerente"],
-                "is_staff": True,
-                "is_superuser": True,
+                "estado": "activo",
+                "fecha_creacion": timezone.now(),
             },
             {
                 "username": "secretaria",
                 "password": "Secretaria123*",
-                "first_name": "Secretaria",
-                "last_name": "PrendaSol",
+                "nombres": "Secretaria",
+                "apellidos": "PrendaSol",
                 "email": "secretaria@prendasol.local",
                 "role": roles["Secretaria"],
-                "is_staff": True,
-                "is_superuser": False,
+                "estado": "activo",
+                "fecha_creacion": timezone.now(),
             },
             {
                 "username": "asesor",
                 "password": "Asesor123*",
-                "first_name": "Asesor",
-                "last_name": "PrendaSol",
+                "nombres": "Asesor",
+                "apellidos": "PrendaSol",
                 "email": "asesor@prendasol.local",
                 "role": roles["Asesor"],
-                "is_staff": False,
-                "is_superuser": False,
+                "estado": "activo",
+                "fecha_creacion": timezone.now(),
             },
         ]
 
         for data in demo_users:
             password = data.pop("password")
-            user, created = User.objects.get_or_create(username=data["username"], defaults=data)
-            for key, value in data.items():
-                setattr(user, key, value)
-            user.set_password(password)
-            user.save()
+            username = data["username"]
+            
+            user, created = Usuario.objects.get_or_create(
+                username=username, 
+                defaults={**data, "password_hash": make_password(password)}
+            )
+            
+            if not created:
+                # Update fields if user already exists
+                for key, value in data.items():
+                    setattr(user, key, value)
+                user.password_hash = make_password(password)
+                user.save()
+            
             action = "creado" if created else "actualizado"
-            self.stdout.write(self.style.SUCCESS(f"Usuario {user.username} {action}"))
+            self.stdout.write(self.style.SUCCESS(f"Usuario {username} {action}"))

@@ -70,10 +70,20 @@ class SessionUserSerializer(serializers.ModelSerializer):
         if not value:
             return None
 
+        # Si ya es una URL completa (S3), devolverla tal cual
+        if isinstance(value, str) and (value.startswith("http://") or value.startswith("https://") or value.startswith("data:")):
+            return value
+
         request = self.context.get("request")
-        if request and isinstance(value, str) and value.startswith("/"):
-            return request.build_absolute_uri(value)
-        return value
+        media_prefix = settings.MEDIA_URL or "/media/"
+        
+        # Si empieza con slash, ya es una ruta absoluta en el servidor
+        if isinstance(value, str) and value.startswith("/"):
+             return request.build_absolute_uri(value) if request else value
+        
+        # Si es una ruta relativa, añadir el prefijo de media
+        path = f"{media_prefix}{str(value).lstrip('/')}"
+        return request.build_absolute_uri(path) if request else path
 
 
 class LoginSerializer(serializers.Serializer):

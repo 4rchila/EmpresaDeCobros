@@ -175,7 +175,11 @@ function UserProfile({
       )
 
       syncSessionUser(data)
-      setAvatarPreview(buildApiFileUrl(data.ruta_foto_perfil))
+      // Forzar recarga con un timestamp para evitar caché de errores anteriores
+      const newUrl = buildApiFileUrl(data.ruta_foto_perfil)
+      if (newUrl) {
+        setAvatarPreview(`${newUrl}${newUrl.includes('?') ? '&' : '?'}t=${new Date().getTime()}`)
+      }
       setMessage('Foto de perfil actualizada correctamente.')
     } catch (err) {
       if (axios.isAxiosError(err)) {
