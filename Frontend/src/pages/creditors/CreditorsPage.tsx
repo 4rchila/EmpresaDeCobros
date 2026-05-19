@@ -438,7 +438,14 @@ function CreditorsPage({ user }: CreditorsPageProps) {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (err) {
       console.error('Error uploading photo', err)
-      setSaveError('No se pudo subir la imagen al servidor. Verifica tu conexión.')
+      // Mostrar el mensaje de error del backend si existe
+      let errorMsg = 'No se pudo subir la imagen al servidor. Verifica tu conexión.'
+      if (axios.isAxiosError(err)) {
+        const detail = (err.response?.data as { detail?: string })?.detail
+        if (detail) errorMsg = detail
+      }
+      setSaveError(errorMsg)
+      setTimeout(() => setSaveError(''), 5000)
     } finally {
       if (field === 'foto_vivienda') setUploadingVivienda(false)
       else setUploadingRecibo(false)
@@ -748,6 +755,8 @@ function CreditorsPage({ user }: CreditorsPageProps) {
             saving={saving}
             saveMessage={saveMessage}
             saveError={saveError}
+            uploadingVivienda={uploadingVivienda}
+            uploadingRecibo={uploadingRecibo}
             onChange={updateForm}
             onReferenceChange={updateReference}
             onPhotoSelection={handlePhotoSelection}
@@ -894,6 +903,8 @@ function VistaNuevoCliente({
   saving,
   saveMessage,
   saveError,
+  uploadingVivienda,
+  uploadingRecibo,
   onChange,
   onReferenceChange,
   onPhotoSelection,
@@ -905,6 +916,8 @@ function VistaNuevoCliente({
   saving: boolean
   saveMessage: string
   saveError: string
+  uploadingVivienda: boolean
+  uploadingRecibo: boolean
   onChange: (field: keyof FormState, value: string) => void
   onReferenceChange: (
     index: number,

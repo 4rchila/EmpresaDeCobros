@@ -126,6 +126,20 @@ class LoansCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         prestamo = serializer.save()
 
+        # Log to Bitacora
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='prestamo',
+            titulo=f'Solicitud de préstamo creada - {prestamo.cliente.nombre_completo if prestamo.cliente else "N/A"}',
+            descripcion=f'Se registró una solicitud de préstamo #{prestamo.id} por Q{prestamo.monto_solicitado}.',
+            monto=prestamo.monto_solicitado,
+            detalles={
+                'Préstamo': f'CR-{prestamo.id}',
+                'Cliente': prestamo.cliente.nombre_completo if prestamo.cliente else 'N/A',
+                'Monto': str(prestamo.monto_solicitado),
+            }
+        )
+
         output = PrestamoDetailSerializer(prestamo, context={"request": request})
         return Response(output.data, status=status.HTTP_201_CREATED)
 
@@ -745,10 +759,41 @@ class BulkRejectCollectionsView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+def _procesar_vencimientos(loans_queryset, today):
+    """
+    Marca como 'vencida' las cuotas que pasaron su fecha y les aplica mora si no se había hecho.
+    """
+    from decimal import Decimal
+    cuotas_vencidas = Cuota.objects.filter(
+        prestamo__in=loans_queryset,
+        fecha_vencimiento__lt=today,
+        estado_cuota='pendiente'
+    ).select_related('plan')
+    
+    for cuota in cuotas_vencidas:
+        if cuota.plan:
+            mora_pct = cuota.plan.mora / Decimal('100')
+            mora = cuota.monto_cuota * mora_pct
+            
+            cuota.mora_generada = mora
+            cuota.monto_cuota += mora
+            cuota.saldo_cuota += mora
+            
+        cuota.estado_cuota = 'vencida'
+        cuota.save(update_fields=['mora_generada', 'monto_cuota', 'saldo_cuota', 'estado_cuota'])
+        
+    Cuota.objects.filter(
+        prestamo__in=loans_queryset,
+        fecha_vencimiento__lt=today,
+        estado_cuota='parcial'
+    ).update(estado_cuota='vencida')
+
+
 class DailyRouteView(APIView):
     """
     Retorna los clientes que tienen pagos para el día de hoy, 
     filtrado por el asesor que hace la petición.
+    Suma cualquier saldo atrasado + mora al monto a cobrar hoy.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -759,6 +804,7 @@ class DailyRouteView(APIView):
         if role_name not in RECAUDACION_ROLES:
             loans_queryset = loans_queryset.filter(cliente__asesor=request.user)
 
+        _procesar_vencimientos(loans_queryset, today)
         
         cuotas = Cuota.objects.filter(
             prestamo__in=loans_queryset,
@@ -766,15 +812,28 @@ class DailyRouteView(APIView):
             estado_cuota__in=['pendiente', 'parcial', 'vencida']
         ).select_related('prestamo', 'prestamo__cliente').order_by('prestamo__cliente__nombres')
         
+        prestamo_ids = [c.prestamo_id for c in cuotas]
+        atrasados = Cuota.objects.filter(
+            prestamo_id__in=prestamo_ids,
+            fecha_vencimiento__lt=today,
+            estado_cuota__in=['vencida', 'parcial']
+        ).values('prestamo_id').annotate(
+            total_atrasado=Sum('saldo_cuota')
+        )
+        atrasados_dict = {item['prestamo_id']: item['total_atrasado'] for item in atrasados}
+
         data = []
         for c in cuotas:
+            total_atrasado = atrasados_dict.get(c.prestamo_id, Decimal("0.00"))
+            monto_total = c.saldo_cuota + total_atrasado
+            
             data.append({
                 "id_cuota": c.id,
                 "prestamo_id": c.prestamo.id,
                 "cliente_id": c.prestamo.cliente.id,
                 "cliente": c.prestamo.cliente.nombre_completo,
                 "direccion": c.prestamo.cliente.direccion,
-                "monto": float(c.saldo_cuota),
+                "monto": float(monto_total),
                 "numero_cuota": c.numero_cuota,
                 "estado": c.estado_cuota,
                 "fecha_vencimiento": c.fecha_vencimiento.strftime('%Y-%m-%d')
@@ -797,13 +856,8 @@ class ClientesAtrasadosView(APIView):
         if role_name not in RECAUDACION_ROLES:
             loans_queryset = loans_queryset.filter(cliente__asesor=request.user)
 
-        
-        # Vencimiento automático: Marcar como vencidas las cuotas pendientes que ya pasaron de fecha
-        Cuota.objects.filter(
-            prestamo__in=loans_queryset,
-            fecha_vencimiento__lt=today,
-            estado_cuota__in=['pendiente', 'parcial']
-        ).update(estado_cuota='vencida')
+        # Vencimiento automático y mora
+        _procesar_vencimientos(loans_queryset, today)
 
         cuotas = Cuota.objects.filter(
             prestamo__in=loans_queryset,

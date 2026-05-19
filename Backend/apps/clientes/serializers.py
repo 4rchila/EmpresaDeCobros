@@ -28,11 +28,16 @@ class ClientePhotoUploadSerializer(serializers.Serializer):
         from config.storage_backends import ClientesStorage
         storage = ClientesStorage()
         archivo = self.validated_data["archivo"]
+        # Asegurar que el puntero esté al inicio (por si Django lo leyó en validación)
+        if hasattr(archivo, 'seek'):
+            archivo.seek(0)
         # Usar timestamp para evitar colisiones de nombres
         timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
         name = f"{timestamp}_{archivo.name}"
+        print(f"[DEBUG UPLOAD] Subiendo archivo: {name} ({archivo.size} bytes) al bucket {storage.bucket_name}")
         filename = storage.save(name, archivo)
         ruta_archivo = storage.url(filename)
+        print(f"[DEBUG UPLOAD] Archivo guardado como: {filename} -> URL: {ruta_archivo}")
         return {
             "ruta_archivo": ruta_archivo,
             "descripcion": (self.validated_data.get("descripcion") or "").strip() or None,

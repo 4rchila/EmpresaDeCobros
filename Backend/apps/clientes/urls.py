@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     BlacklistView,
+    ClasificarCarterasView,
     CreditorDetailView,
     CreditorsCreateView,
     CreditorsSearchView,
@@ -40,4 +41,5 @@ urlpatterns = [
     path("portfolio/<int:cartera_id>/", PortfolioDetailView.as_view(), name="portfolio-detail"),
     path("portfolio/move-client/", MoveClientPortfolioView.as_view(), name="portfolio-move-client"),
     path("upload-photo/", ClientePhotoUploadView.as_view(), name="creditors-upload-photo"),
+    path("clasificar-carteras/", ClasificarCarterasView.as_view(), name="clasificar-carteras"),
 ]

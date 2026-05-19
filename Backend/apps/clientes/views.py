@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.prestamos.models import Prestamo
 from apps.notificaciones.models import Notificacion
 from apps.bitacora.utils import registrar_en_bitacora
+from .classification import clasificar_carteras_por_mora
 from .models import Cartera, Cliente, InformeNuevoCliente, ListaNegraCliente
 from .serializers import (
     CarteraCreateSerializer,
@@ -72,7 +73,17 @@ class ClientePhotoUploadView(APIView):
 
         serializer = ClientePhotoUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = serializer.save()
+
+        try:
+            data = serializer.save()
+        except Exception as exc:
+            import traceback
+            print("[ERROR UPLOAD FOTO]", traceback.format_exc())
+            return Response(
+                {"detail": f"Error al subir la imagen al almacenamiento: {str(exc)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         return Response(data, status=status.HTTP_201_CREATED)
 
 
@@ -392,8 +403,17 @@ class BlacklistAddView(APIView):
         serializer.is_valid(raise_exception=True)
         item = serializer.save()
 
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='cliente',
+            titulo=f'Cliente agregado a lista negra - {item.cliente.nombre_completo}',
+            descripcion=f'El cliente {item.cliente.nombre_completo} (DPI: {item.cliente.dpi}) fue agregado a la lista negra.',
+            detalles={'cliente_id': item.cliente.id, 'dpi': item.cliente.dpi}
+        )
+
         output = ListaNegraItemSerializer(item)
         return Response(output.data, status=status.HTTP_201_CREATED)
+
 
 
 class BlacklistView(APIView):
@@ -416,51 +436,17 @@ class BlacklistView(APIView):
 
 class PortfolioBoardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         try:
-            # Permitimos a cualquier usuario autenticado ver sus propias carteras.
-            today = timezone.localdate()
-
-            # 1. Asegurarnos de que exista una cartera "Vencida" para el usuario
-            # Usamos .filter().first() en lugar de get_or_create para evitar MultipleObjectsReturned
-            cartera_vencida = Cartera.objects.filter(
-                usuario_responsable=request.user,
-                estado='vencida'
-            ).first()
-
-            if not cartera_vencida:
-                try:
-                    cartera_vencida = Cartera.objects.create(
-                        usuario_responsable=request.user,
-                        nombre_cartera='Cartera Vencida',
-                        estado='vencida'
-                    )
-                except Exception as e:
-                    print(f"Error creando cartera vencida: {e}")
-                    # Si falla la creación, simplemente no movemos clientes hoy
-                    cartera_vencida = None
-
-            # 2. Identificar clientes del usuario con cuotas vencidas (saldo > 0 y fecha < hoy)
-            if cartera_vencida:
-                from apps.prestamos.models import Cuota
-                clientes_mora_ids = Cuota.objects.filter(
-                    prestamo__cliente__asesor=request.user,
-                    fecha_vencimiento__lt=today,
-                    saldo_cuota__gt=0,
-                    estado_cuota__in=['pendiente', 'parcial', 'vencida']
-                ).values_list('prestamo__cliente_id', flat=True).distinct()
-
-                # 3. Mover esos clientes a la cartera vencida si no están ya en una vencida/muerta
-                if clientes_mora_ids:
-                    Cliente.objects.filter(
-                        id__in=clientes_mora_ids
-                    ).exclude(
-                        cartera__estado__in=['vencida', 'muerta']
-                    ).update(cartera=cartera_vencida)
+            # Clasificar carteras automáticamente cada vez que se carga el portfolio
+            clasificar_carteras_por_mora(usuario_trigger=request.user)
 
             client_queryset = get_portafolio_client_queryset_for_user(request.user)
-            carteras_queryset = Cartera.objects.filter(usuario_responsable=request.user).order_by("nombre_cartera")
-            
+            carteras_queryset = Cartera.objects.filter(
+                usuario_responsable=request.user
+            ).order_by("nombre_cartera")
+
             carteras_data = PortafolioCarteraSerializer(
                 carteras_queryset,
                 many=True,
@@ -502,8 +488,33 @@ class PortfolioBoardView(APIView):
             print(traceback.format_exc())
             return Response(
                 {"detail": f"Error interno al cargar el portafolio: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class ClasificarCarterasView(APIView):
+    """Endpoint para disparar manualmente la clasificación de carteras por mora.
+    Solo accesible por administradores o vía cron."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not is_admin_user(request.user):
+            return Response(
+                {"detail": "Solo los administradores pueden ejecutar esta acción."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        result = clasificar_carteras_por_mora(usuario_trigger=request.user)
+        return Response(
+            {
+                "detail": "Clasificación completada.",
+                "movidos_vencida": result["movidos_vencida"],
+                "movidos_muerta": result["movidos_muerta"],
+                "agregados_lista_negra": result["agregados_lista_negra"],
+                "errores": result["errores"],
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PortfolioCreateView(APIView):

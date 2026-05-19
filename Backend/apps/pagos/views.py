@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Caja, IngresoCaja, EgresoCaja
 from .serializers import CajaSerializer, MovimientoCajaSerializer, RegistrarEgresoSerializer
 from django.db import transaction
+from apps.bitacora.utils import registrar_en_bitacora
 
 class CajaDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -83,12 +84,22 @@ class RegistrarEgresoView(APIView):
             caja.save()
 
             # Registrar egreso
-            EgresoCaja.objects.create(
+            egreso = EgresoCaja.objects.create(
                 caja=caja,
                 usuario_registra=request.user,
                 tipo_egreso=tipo_egreso,
                 monto=monto,
                 descripcion=descripcion
+            )
+
+            # Log to Bitacora
+            registrar_en_bitacora(
+                usuario=request.user,
+                categoria='egreso',
+                titulo=f'Egreso manual de caja - {tipo_egreso}',
+                descripcion=f'Se registró un egreso de Q{monto} de la caja fuerte. Motivo: {descripcion or tipo_egreso}.',
+                monto=monto,
+                detalles={'tipo_egreso': tipo_egreso, 'descripcion': descripcion, 'egreso_id': egreso.id_egreso_caja}
             )
 
             return Response({"message": "Egreso registrado exitosamente."}, status=status.HTTP_201_CREATED)

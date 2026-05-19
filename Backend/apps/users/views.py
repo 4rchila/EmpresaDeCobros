@@ -24,6 +24,7 @@ from .serializers import (
     UsuarioEstadoSerializer,
     UsuarioListSerializer,
 )
+from apps.bitacora.utils import registrar_en_bitacora
 
 ADMIN_ROLES = {"administrador", "admin", "gerente"}
 
@@ -108,12 +109,26 @@ class LoginView(APIView):
         )
 
         if not user:
+            registrar_en_bitacora(
+                usuario=None,
+                categoria='sistema',
+                titulo='Intento de login fallido',
+                descripcion=f'Usuario no encontrado: "{username}".',
+                detalles={'username': username}
+            )
             return Response(
                 {"detail": "Credenciales incorrectas."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not password_matches(password, user.password_hash):
+            registrar_en_bitacora(
+                usuario=user,
+                categoria='sistema',
+                titulo='Intento de login fallido',
+                descripcion=f'Contraseña incorrecta para el usuario "{username}".',
+                detalles={'username': username}
+            )
             return Response(
                 {"detail": "Credenciales incorrectas."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -128,6 +143,14 @@ class LoginView(APIView):
         access = build_token(user, "access")
         refresh = build_token(user, "refresh")
         session_user = SessionUserSerializer(user, context={"request": request}).data
+
+        registrar_en_bitacora(
+            usuario=user,
+            categoria='sistema',
+            titulo='Inicio de sesión',
+            descripcion=f'El usuario "{user.username}" inició sesión correctamente.',
+            detalles={'username': user.username, 'rol': user.role.name if user.role_id else 'Sin rol'}
+        )
 
         return Response(
             {
@@ -159,6 +182,14 @@ class MeUsernameUpdateView(APIView):
 
         request.user.username = serializer.validated_data["username"]
         request.user.save(update_fields=["username"])
+
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='sistema',
+            titulo='Username actualizado',
+            descripcion=f'El usuario cambió su nombre de usuario a "{request.user.username}".',
+            detalles={'nuevo_username': request.user.username}
+        )
 
         output = SessionUserSerializer(request.user, context={"request": request})
         return Response(output.data, status=status.HTTP_200_OK)
@@ -203,6 +234,14 @@ class MePasswordUpdateView(APIView):
 
         request.user.password_hash = make_password(new_password)
         request.user.save(update_fields=["password_hash"])
+
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='sistema',
+            titulo='Contraseña actualizada',
+            descripcion=f'El usuario "{request.user.username}" cambió su contraseña.',
+            detalles={'username': request.user.username}
+        )
 
         return Response(
             {"detail": "Contraseña actualizada correctamente."},
@@ -317,6 +356,14 @@ class UsersListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
 
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='asesor',
+            titulo=f'Nuevo usuario creado - {usuario.full_name}',
+            descripcion=f'Se creó el usuario "{usuario.username}" con rol {usuario.role.name if usuario.role_id else "Sin rol"}.',
+            detalles={'username': usuario.username, 'rol': usuario.role.name if usuario.role_id else 'Sin rol', 'email': usuario.email}
+        )
+
         output = UsuarioListSerializer(usuario)
         return Response(output.data, status=status.HTTP_201_CREATED)
 
@@ -347,6 +394,14 @@ class UserStatusUpdateView(APIView):
 
         usuario.estado = serializer.validated_data["estado"]
         usuario.save(update_fields=["estado"])
+
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='asesor',
+            titulo=f'Estado de usuario actualizado - {usuario.full_name}',
+            descripcion=f'El usuario "{usuario.username}" fue marcado como "{usuario.estado}".',
+            detalles={'username': usuario.username, 'nuevo_estado': usuario.estado}
+        )
 
         output = UsuarioListSerializer(usuario)
         return Response(output.data, status=status.HTTP_200_OK)
@@ -442,5 +497,13 @@ class TransferCarteraView(APIView):
         serializer = TransferenciaCarteraSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
+
+        registrar_en_bitacora(
+            usuario=request.user,
+            categoria='asesor',
+            titulo='Transferencia de cartera realizada',
+            descripcion='Se transfirió una cartera entre asesores.',
+            detalles=result if isinstance(result, dict) else {}
+        )
 
         return Response(result, status=status.HTTP_200_OK)
