@@ -12,3 +12,4 @@ boto3
 python-dotenv
 docxtpl
 num2words
+gunicorn

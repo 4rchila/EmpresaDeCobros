@@ -1,13 +1,3 @@
-"""
-Django management command: clasificar_carteras
-
-Ejecutar manualmente:
-    python manage.py clasificar_carteras
-
-Programar con cron (Linux):
-    0 6 * * * /ruta/venv/bin/python /ruta/manage.py clasificar_carteras
-"""
-
 from django.core.management.base import BaseCommand
 
 from apps.clientes.classification import clasificar_carteras_por_mora
