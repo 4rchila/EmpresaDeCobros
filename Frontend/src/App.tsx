@@ -9,7 +9,7 @@ import PortafolioPage from './pages/user/portafolioPage'
 import PaymentsPage from './pages/payment/payments'
 import VaultPage from './pages/vault/vault'
 import ReportsPage from './pages/report/reports'
-import LogsPage from './pages/Log/logs'
+import LogsPage from './pages/log/logs'
 
 function App() {
   return (
